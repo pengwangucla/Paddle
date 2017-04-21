@@ -31,92 +31,29 @@ except ImportError:
 import copy
 
 __all__ = [
-    "full_matrix_projection",
-    "AggregateLevel",
-    "ExpandLevel",
-    "identity_projection",
-    "dotmul_projection",
-    "dotmul_operator",
-    "repeat_layer",
-    "seq_reshape_layer",
-    "table_projection",
-    "mixed_layer",
-    "data_layer",
-    "embedding_layer",
-    "fc_layer",
-    "grumemory",
-    "pooling_layer",
-    "lstmemory",
-    "last_seq",
-    "first_seq",
-    "cos_sim",
-    "hsigmoid",
-    "conv_projection",
-    "mse_cost",
-    "regression_cost",
-    'classification_cost',
-    "LayerOutput",
-    'img_conv_layer',
-    'img_pool_layer',
-    'batch_norm_layer',
-    'img_cmrnorm_layer',
-    'addto_layer',
-    'concat_layer',
-    'seq_concat_layer',
-    'lstm_step_layer',
-    'recurrent_group',
-    'memory',
-    'StaticInput',
-    'expand_layer',
-    'scaling_layer',
-    'scaling_projection',
-    'power_layer',
-    'interpolation_layer',
-    'bilinear_interp_layer',
-    'trans_layer',
-    'rotate_layer',
-    'sum_to_one_norm_layer',
-    'get_output_layer',
-    'LayerType',
-    'context_projection',
-    'beam_search',
-    'maxid_layer',
-    'GeneratedInput',
-    'SubsequenceInput',
-    'gru_step_layer',
-    'recurrent_layer',
-    'BaseGeneratedInput',
-    'conv_operator',
-    'conv_shift_layer',
-    'tensor_layer',
-    'selective_fc_layer',
-    'sampling_id_layer',
-    'slope_intercept_layer',
-    'trans_full_matrix_projection',
-    'linear_comb_layer',
-    'convex_comb_layer',
-    'ctc_layer',
-    'warp_ctc_layer',
-    'crf_layer',
-    'crf_decoding_layer',
-    'nce_layer',
-    'cross_entropy_with_selfnorm',
-    'cross_entropy',
-    'multi_binary_label_cross_entropy',
-    'sum_cost',
-    'rank_cost',
-    'lambda_cost',
-    'huber_cost',
-    'block_expand_layer',
-    'maxout_layer',
-    'out_prod_layer',
-    'print_layer',
-    'priorbox_layer',
-    'cross_channel_norm_layer',
-    'spp_layer',
-    'pad_layer',
-    'eos_layer',
-    'layer_support',
+    "full_matrix_projection", "AggregateLevel", "ExpandLevel",
+    "identity_projection", "dotmul_projection", "dotmul_operator",
+    "repeat_layer", "seq_reshape_layer", "table_projection", "mixed_layer",
+    "data_layer", "embedding_layer", "fc_layer", "grumemory", "pooling_layer",
+    "lstmemory", "last_seq", "first_seq", "cos_sim", "hsigmoid",
+    "conv_projection", "mse_cost", "regression_cost", "smoothl1_cost",
+    'classification_cost', "LayerOutput", 'img_conv_layer', 'img_pool_layer',
+    'batch_norm_layer', 'img_cmrnorm_layer', 'addto_layer', 'concat_layer',
+    'seq_concat_layer', 'lstm_step_layer', 'recurrent_group', 'memory',
+    'StaticInput', 'expand_layer', 'scaling_layer', 'scaling_projection',
+    'power_layer', 'interpolation_layer', 'bilinear_interp_layer',
+    'trans_layer', 'rotate_layer', 'sum_to_one_norm_layer', 'get_output_layer',
+    'LayerType', 'context_projection', 'beam_search', 'maxid_layer',
+    'GeneratedInput', 'SubsequenceInput', 'gru_step_layer', 'recurrent_layer',
+    'BaseGeneratedInput', 'conv_operator', 'conv_shift_layer', 'tensor_layer',
+    'selective_fc_layer', 'sampling_id_layer', 'slope_intercept_layer',
+    'trans_full_matrix_projection', 'linear_comb_layer', 'convex_comb_layer',
+    'ctc_layer', 'warp_ctc_layer', 'crf_layer', 'crf_decoding_layer',
+    'nce_layer', 'cross_entropy_with_selfnorm', 'cross_entropy',
+    'multi_binary_label_cross_entropy', 'sum_cost', 'rank_cost', 'lambda_cost',
+    'huber_cost', 'block_expand_layer', 'maxout_layer', 'out_prod_layer',
+    'print_layer', 'priorbox_layer', 'cross_channel_norm_layer', 'spp_layer',
+    'pad_layer', 'eos_layer', 'layer_support', 'resize_layer', 'transpose_layer'
 ]
 
 
@@ -165,6 +102,8 @@ class LayerType(object):
     SCALING_LAYER = 'scaling'
     TRANS_LAYER = 'trans'
     ROTATE_LAYER = 'rotate'
+    RESIZE_LAYER = 'resize'
+    TRANSPOSE_LAYER = 'transpose'
     OUT_PROD_LAYER = 'out_prod'
     FEATURE_MAP_EXPAND_LAYER = 'featmap_expand'
 
@@ -594,7 +533,9 @@ def dotmul_operator(a=None, b=None, scale=1, **kwargs):
     b = kwargs.get('y', b)
     assert isinstance(a, LayerOutput)
     assert isinstance(b, LayerOutput)
+
     if a.size is not None and b.size is not None:
+        print a.name, a.size, 'and', b.name, b.size
         assert a.size == b.size
 
     op = DotMulOperator(input_layer_names=[a.name, b.name], scale=scale)
@@ -829,7 +770,15 @@ def data_layer(name, size, height=None, width=None, layer_attr=None):
         width=width,
         **ExtraLayerAttribute.to_kwargs(layer_attr))
 
-    return LayerOutput(name, LayerType.DATA, size=size)
+    num_channels = None
+    if height and width:
+        num_channels = size / (height * width)
+
+    return LayerOutput(
+        name=name,
+        layer_type=LayerType.DATA,
+        size=size,
+        num_filters=num_channels)
 
 
 @wrap_name_default("embedding")
@@ -1685,8 +1634,8 @@ def bilinear_interp_layer(input,
     :return: LayerOutput object.
     :rtype:  LayerOutput
     """
-    assert input.layer_type == LayerType.CONV_LAYER
-    assert isinstance(input.activation, LinearActivation)
+    # assert input.layer_type == LayerType.CONV_LAYER
+    # assert isinstance(input.activation, LinearActivation)
     assert out_size_x > 0 and out_size_y > 0
     assert input.num_filters is not None
     num_channels = input.num_filters
@@ -1831,6 +1780,37 @@ def trans_layer(input, name=None, layer_attr=None):
 
 @wrap_name_default()
 @layer_support()
+def resize_layer(input, size, name=None, layer_attr=None):
+    """
+    A layer for reshape a minibatch matrix.
+
+    The example usage is:
+
+    .. code-block:: python
+
+       resize = resize_layer(input=layer)
+
+    :param input: Input layer.
+    :type input: LayerOutput
+    :size: The size of output item in each minibatch
+    :param name: Layer name.
+    :type name: basestring
+    :param layer_attr: extra layer attributes.
+    :type layer_attr: ExtraLayerAttribute
+    :return: LayerOutput object.
+    :rtype: LayerOutput
+    """
+    Layer(
+        name=name,
+        type=LayerType.RESIZE_LAYER,
+        size=size,
+        inputs=[input.name],
+        **ExtraAttr.to_kwargs(layer_attr))
+    return LayerOutput(name, LayerType.RESIZE_LAYER, parents=[input], size=size)
+
+
+@wrap_name_default()
+@layer_support()
 def rotate_layer(input, height, width, name=None, layer_attr=None):
     """
     A layer for rotating 90 degrees (clock-wise) for each feature channel,
@@ -1872,6 +1852,69 @@ def rotate_layer(input, height, width, name=None, layer_attr=None):
         name=name,
         layer_type=LayerType.ROTATE_LAYER,
         parents=[input],
+        size=l.config.size)
+
+
+@wrap_name_default()
+@layer_support()
+def transpose_layer(input,
+                    trans_order,
+                    height=None,
+                    width=None,
+                    name=None,
+                    layer_attr=None):
+    """
+    A layer for transpose the order of height width and channel
+    .. math::
+    The example usage is:
+
+    .. code-block:: python
+
+       rot = rotate_layer(input=layer,
+                          height=100,
+                          width=100)
+
+    :param input: Input layer.
+    :type input: LayerOutput
+    :param trans_order: The order of transpose for a tensor.
+    :type trans_order: List
+    :param name: Layer name.
+    :type name: basestring
+    :param layer_attr: extra layer attributes.
+    :type layer_attr: ExtraLayerAttribute.
+    :return: LayerOutput object.
+    :rtype: LayerOutput
+    """
+    assert isinstance(input, LayerOutput)
+    assert input.num_filters is not None
+    num_channels = input.num_filters
+    assert len(trans_order) == 3
+
+    trans_order_new = [0, 0, 0]
+    for i in range(3):
+        trans_order_new[trans_order[i]] = i
+
+    out_ch = None
+    if height and width:
+        out_ch = [width, height, num_channels]
+        out_ch = out_ch[trans_order[2]]
+
+    l = Layer(
+        name=name,
+        type=LayerType.TRANSPOSE_LAYER,
+        inputs=Input(
+            input.name,
+            transpose=Transpose(
+                channels=num_channels,
+                trans_order_w=trans_order_new[0],
+                trans_order_h=trans_order_new[1],
+                trans_order_c=trans_order_new[2])),
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+    return LayerOutput(
+        name,
+        layer_type=LayerType.TRANSPOSE_LAYER,
+        parents=[input],
+        num_filters=out_ch,
         size=l.config.size)
 
 
@@ -2760,6 +2803,14 @@ def concat_layer(input, act=None, name=None, layer_attr=None, bias_attr=None):
     if layer_type == LayerType.CONCAT_LAYER:
         assert not bias_attr
 
+    num_channels = 0
+    for input_i in input:
+        if input_i.num_filters is not None:
+            num_channels += input_i.num_filters
+        else:
+            num_channels = None
+            break
+
     Layer(
         name=name,
         type=layer_type,
@@ -2781,7 +2832,8 @@ def concat_layer(input, act=None, name=None, layer_attr=None, bias_attr=None):
         layer_type=layer_type,
         parents=input if is_concat_layer else [x.origin for x in input],
         activation=act,
-        size=sz)
+        size=sz,
+        num_filters=num_channels)
 
 
 @wrap_name_default("seqconcat")
@@ -3717,6 +3769,41 @@ def mse_cost(input, label, weight=None, name=None, layer_attr=None):
 
 
 regression_cost = mse_cost
+
+
+@wrap_name_default()
+@layer_support()
+def smoothl1_cost(input, label, weight=None, name=None, layer_attr=None):
+    """
+    mean squared error cost:
+
+    ..  math::
+
+       $\frac{1}{N}\sum_{i=1}^N|t _i- y_i|$
+
+
+    :param name: layer name.
+    :type name: basestring
+    :param input: Network prediction.
+    :type input: LayerOutput
+    :param label: Data label.
+    :type label: LayerOutput
+    :param weight: The weight affects the cost, namely the scale of cost.
+                   It is an optional argument.
+    :type weight: LayerOutput
+    :param layer_attr: layer's extra attribute.
+    :type layer_attr: ExtraLayerAttribute
+    :return: LayerOutput object.
+    :rtype: LayerOutput
+    """
+    ipts, parents = __cost_input__(input, label, weight)
+
+    Layer(
+        inputs=ipts,
+        type="smooth_l1",
+        name=name,
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+    return LayerOutput(name, LayerType.COST, parents=parents, size=1)
 
 
 @wrap_name_default("cost")

@@ -1,4 +1,11 @@
 # gserver pacakge unittests
+################# test_TransposeLayer #######################
+add_unittest_without_exec(test_Transpose
+    test_Transpose.cpp
+    LayerGradUtil.cpp)
+
+add_test(NAME test_Transpose
+    COMMAND test_Transpose)
 
 ################### test_ProtoDataProvider ############
 add_unittest_without_exec(test_ProtoDataProvider

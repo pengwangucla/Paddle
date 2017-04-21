@@ -493,6 +493,7 @@ TEST(Layer, maxoutLayer) {
     testLayerGrad(config, "maxout", 10, false, useGpu);
   }
 }
+
 void testFcLayer(string format, size_t nnz) {
   TestConfig config;
   config.biasSize = 4096;
@@ -1346,6 +1347,30 @@ TEST(Layer, RotateLayer) {
 
   for (auto useGpu : {false, true}) {
     testLayerGrad(config, "rotate", 100, false, useGpu);
+  }
+}
+
+TEST(Layer, TransposeLayer) {
+  TestConfig config;
+  config.biasSize = 0;
+  config.layerConfig.set_type("transpose");
+  const int CHANNEL = 2;
+  const int HEIGHT = 8;
+  const int WIDTH = 4;
+  const int INPUT_SIZE = HEIGHT * WIDTH * CHANNEL;
+  config.layerConfig.set_size(INPUT_SIZE);
+  config.layerConfig.set_height(HEIGHT);
+  config.layerConfig.set_width(WIDTH);
+  config.inputDefs.push_back({INPUT_DATA, "layer_0", INPUT_SIZE, 0});
+
+  LayerInputConfig* input = config.layerConfig.add_inputs();
+  TransposeConfig* transpose = input->mutable_transpose_conf();
+  transpose->set_trans_order_w(1);
+  transpose->set_trans_order_h(2);
+  transpose->set_trans_order_c(0);
+
+  for (auto useGpu : {false, true}) {
+    testLayerGrad(config, "transpose", 100, false, useGpu);
   }
 }
 

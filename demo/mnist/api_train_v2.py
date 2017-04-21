@@ -56,7 +56,7 @@ def convolutional_neural_network(img):
 
 
 def main():
-    paddle.init(use_gpu=False, trainer_count=1)
+    paddle.init(use_gpu=True, trainer_count=1)
 
     # define network topology
     images = paddle.layer.data(
@@ -72,11 +72,11 @@ def main():
 
     cost = paddle.layer.classification_cost(input=predict, label=label)
 
-    try:
-        with gzip.open('params.tar.gz', 'r') as f:
-            parameters = paddle.parameters.Parameters.from_tar(f)
-    except IOError:
-        parameters = paddle.parameters.create(cost)
+    # try:
+    #     with gzip.open('params.tar.gz', 'r') as f:
+    #         parameters = paddle.parameters.Parameters.from_tar(f)
+    # except IOError:
+    parameters = paddle.parameters.create(cost)
 
     optimizer = paddle.optimizer.Momentum(
         learning_rate=0.1 / 128.0,

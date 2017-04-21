@@ -28,9 +28,9 @@ namespace paddle {
  *
  * The config file api is trans_layer.
  */
-class TransLayer : public Layer {
+class ReshapeLayer : public Layer {
 public:
-  explicit TransLayer(const LayerConfig& config) : Layer(config) {}
+  explicit ReshapeLayer(const LayerConfig& config) : Layer(config) {}
 
   bool init(const LayerMap& layerMap,
             const ParameterMap& parameterMap) override;

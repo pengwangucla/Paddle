@@ -1,0 +1,27 @@
+I0418 22:56:22.407316 22480 Util.cpp:166] commandline: /usr/local/bin/../opt/paddle/bin/paddle_trainer --config=vgg_16_mnist.py --dot_period=10 --log_period=100 --test_all_data_in_one_period=1 --use_gpu=0 --trainer_count=1 --num_passes=100 --save_dir=./mnist_vgg_model 
+Traceback (most recent call last):
+  File "/home/peng/Paddle/python/paddle/trainer/config_parser.py", line 3640, in parse_config_and_serialize
+    config = parse_config(trainer_config, config_arg_str)
+  File "/home/peng/Paddle/python/paddle/trainer/config_parser.py", line 3633, in parse_config
+    make_config_environment(trainer_config, config_args))
+IOError: [Errno 2] No such file or directory: 'vgg_16_mnist.py'
+F0418 22:56:22.529587 22480 PythonUtil.cpp:131] Check failed: (ret) != nullptr Current PYTHONPATH: ['/usr/local/opt/paddle/bin', '/home/peng/Paddle', '/home/peng/Paddle/python', '/usr/lib/python2.7', '/usr/lib/python2.7/plat-x86_64-linux-gnu', '/usr/lib/python2.7/lib-tk', '/usr/lib/python2.7/lib-old', '/usr/lib/python2.7/lib-dynload', '/usr/local/lib/python2.7/dist-packages', '/usr/lib/python2.7/dist-packages', '/usr/lib/python2.7/dist-packages/PILcompat', '/usr/lib/python2.7/dist-packages/gtk-2.0', '/usr/lib/python2.7/dist-packages/ubuntu-sso-client']
+Python Error: <type 'exceptions.IOError'> : [Errno 2] No such file or directory: 'vgg_16_mnist.py'
+Python Callstack: 
+            /home/peng/Paddle/python/paddle/trainer/config_parser.py : 3640
+            /home/peng/Paddle/python/paddle/trainer/config_parser.py : 3633
+Call Object failed.
+*** Check failure stack trace: ***
+    @           0x9bfc9d  google::LogMessage::Fail()
+    @           0x9c37e5  google::LogMessage::SendToLog()
+    @           0x9bf7c3  google::LogMessage::Flush()
+    @           0x9c4cfe  google::LogMessageFatal::~LogMessageFatal()
+    @           0x90832a  paddle::callPythonFuncRetPyObj()
+    @           0x90850c  paddle::callPythonFunc()
+    @           0x7e356b  paddle::TrainerConfigHelper::TrainerConfigHelper()
+    @           0x7e3ba4  paddle::TrainerConfigHelper::createFromFlags()
+    @           0x629f82  main
+    @     0x7f9bbff2cf45  __libc_start_main
+    @           0x643332  (unknown)
+    @              (nil)  (unknown)
+/usr/local/bin/paddle: line 113: 22480 Aborted                 (core dumped) ${DEBUGGER} $MYDIR/../opt/paddle/bin/paddle_trainer ${@:2}

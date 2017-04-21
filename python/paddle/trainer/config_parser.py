@@ -494,6 +494,7 @@ class Input(Cfg):
             maxout=None,
             spp=None,
             pad=None,
+            transpose=None,
             format=None,
             nnz=None,
             is_static=None,
@@ -911,6 +912,12 @@ class SpatialPyramidPool(Cfg):
 @config_class
 class Pad(Cfg):
     def __init__(self, channels, pad_c, pad_h, pad_w):
+        self.add_keys(locals())
+
+
+@config_class
+class Transpose(Cfg):
+    def __init__(self, channels, trans_order_w, trans_order_h, trans_order_c):
         self.add_keys(locals())
 
 
@@ -1950,6 +1957,30 @@ class PadLayer(LayerBase):
         self.config.size = out_ch * out_h * out_w
 
 
+@config_layer('transpose')
+class TransposeLayer(LayerBase):
+    def __init__(self, name, inputs, **xargs):
+        super(TransposeLayer, self).__init__(
+            name, 'transpose', 0, inputs=inputs, **xargs)
+        config_assert(
+            len(self.inputs) == 1,
+            'TransposeLayer must have one and only one input')
+        transpose = self.inputs[0].transpose
+        self.config.inputs[0].transpose_conf.trans_order_c = \
+            transpose.trans_order_c
+        self.config.inputs[0].transpose_conf.trans_order_h = \
+            transpose.trans_order_h
+        self.config.inputs[0].transpose_conf.trans_order_w = \
+            transpose.trans_order_w
+
+        input_layer = self.get_input_layer(0)
+        image_conf = self.config.inputs[0].transpose_conf.image_conf
+        parse_image(transpose, input_layer.name, image_conf)
+
+        self.set_layer_height_width(image_conf.img_size_y, image_conf.img_size)
+        self.set_layer_size(self.get_input_layer(0).size)
+
+
 @config_layer('batch_norm')
 class BatchNormLayer(LayerBase):
     layer_type = 'batch_norm'
@@ -2115,6 +2146,7 @@ define_cost('RankingCost', 'rank-cost')
 define_cost('AucValidation', 'auc-validation')
 define_cost('PnpairValidation', 'pnpair-validation')
 define_cost('SumOfSquaresCostLayer', 'square_error')
+define_cost('SmoothL1CostLayer', 'smooth_l1')
 define_cost('MultiBinaryLabelCrossEntropy', 'multi_binary_label_cross_entropy')
 define_cost('SoftBinaryClassCrossEntropy', 'soft_binary_class_cross_entropy')
 define_cost('HuberTwoClass', 'huber')

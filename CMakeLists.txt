@@ -40,7 +40,7 @@ option(WITH_AVX         "Compile PaddlePaddle with AVX intrinsics"      ${AVX_FO
 option(WITH_DSO         "Compile PaddlePaddle with dynamic linked CUDA" ON)
 option(WITH_TESTING     "Compile PaddlePaddle with unit testing"        ON)
 option(WITH_SWIG_PY     "Compile PaddlePaddle with inference api"       ON)
-option(WITH_STYLE_CHECK "Compile PaddlePaddle with style check"         ON)
+option(WITH_STYLE_CHECK "Compile PaddlePaddle with style check"         OFF)
 option(WITH_PYTHON      "Compile PaddlePaddle with python interpreter"  ON)
 option(WITH_DOUBLE      "Compile PaddlePaddle with double precision"    OFF)
 option(WITH_RDMA        "Compile PaddlePaddle with RDMA support"        OFF)

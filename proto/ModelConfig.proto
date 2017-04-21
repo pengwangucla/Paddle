@@ -262,6 +262,13 @@ message PadConfig {
   repeated uint32 pad_w = 4;
 }
 
+message TransposeConfig {
+  required ImageConfig image_conf = 1;
+  required uint32 trans_order_c = 2;
+  required uint32 trans_order_h = 3;
+  required uint32 trans_order_w = 4;
+}
+
 message LayerInputConfig {
   required string input_layer_name = 1;
   optional string input_parameter_name = 2;
@@ -279,6 +286,7 @@ message LayerInputConfig {
   optional SppConfig spp_conf = 12;
   optional PriorBoxConfig priorbox_conf = 13;
   optional PadConfig pad_conf = 14;
+  optional TransposeConfig transpose_conf = 15;
 }
 
 message LayerConfig {

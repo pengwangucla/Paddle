@@ -18,7 +18,7 @@ limitations under the License. */
 
 namespace paddle {
 /**
- * @brief A layer for resizing a minibatch matrix h*w to h'*w'
+ * @brief A layer for resizing a minibatch matrix
  * @note
  * origin matrix height * width)
  * resize matrix: (height * width / size) * size
