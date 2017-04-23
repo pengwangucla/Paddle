@@ -3640,7 +3640,7 @@ void CpuMatrix::smoothL1Bp(Matrix& output, Matrix& label) {
   CHECK_EQ(label.getHeight(), numSamples);
   CHECK_EQ(output.getHeight(), numSamples);
   CHECK_EQ(label.getWidth(), dim);
-  CHECK_EQ(getWidth(), (size_t)1);
+  CHECK_EQ(getWidth(), dim);
   real* out = output.getData();
   real* cost = getData();
   real* lbl = label.getData();
