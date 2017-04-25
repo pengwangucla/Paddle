@@ -63,7 +63,7 @@ def plot_paddle_curve_v2(keys,
                          outputfile,
                          format='png',
                          show_fig=False):
-    """Plot curves from paddle log and save to outputfile.
+    """Plot curves from paddle log and save to outputfile for v2 log
 
     :param keys: a list of strings to be plotted, e.g. AvgCost
     :param inputfile: a file object for input
@@ -73,7 +73,7 @@ def plot_paddle_curve_v2(keys,
     pass_pattern = r"Pass ([0-9]*)"
     test_pattern = r"Test samples ([0-9]*)"
     if not keys:
-        keys = ['AvgCost']
+        keys = ['Cost']
     for k in keys:
         pass_pattern += r".*?%s ([0-9e\-\.]*)" % k
         test_pattern += r".*?%s ([0-9e\-\.]*)" % k
