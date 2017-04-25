@@ -58,6 +58,62 @@ import re
 import os
 
 
+def plot_paddle_curve_v2(keys,
+                         inputfile,
+                         outputfile,
+                         format='png',
+                         show_fig=False):
+    """Plot curves from paddle log and save to outputfile.
+
+    :param keys: a list of strings to be plotted, e.g. AvgCost
+    :param inputfile: a file object for input
+    :param outputfile: a file object for output
+    :return: None
+    """
+    pass_pattern = r"Pass ([0-9]*)"
+    test_pattern = r"Test samples ([0-9]*)"
+    if not keys:
+        keys = ['AvgCost']
+    for k in keys:
+        pass_pattern += r".*?%s ([0-9e\-\.]*)" % k
+        test_pattern += r".*?%s ([0-9e\-\.]*)" % k
+    data = []
+    test_data = []
+    compiled_pattern = re.compile(pass_pattern)
+    compiled_test_pattern = re.compile(test_pattern)
+    for line in inputfile:
+        found = compiled_pattern.search(line)
+        found_test = compiled_test_pattern.search(line)
+        if found:
+            data.append([float(x) for x in found.groups()])
+        if found_test:
+            test_data.append([float(x) for x in found_test.groups()])
+    x = numpy.array(data)
+    x_test = numpy.array(test_data)
+    if x.shape[0] <= 0:
+        sys.stderr.write("No data to plot. Exiting!\n")
+        return
+    m = len(keys) + 1
+    for i in xrange(1, m):
+        pyplot.plot(
+            x[:, 0],
+            x[:, i],
+            color=cm.jet(1.0 * (i - 1) / (2 * m)),
+            label=keys[i - 1])
+        if (x_test.shape[0] > 0):
+            pyplot.plot(
+                x[:, 0],
+                x_test[:, i],
+                color=cm.jet(1.0 - 1.0 * (i - 1) / (2 * m)),
+                label="Test " + keys[i - 1])
+    pyplot.xlabel('number of epoch')
+    pyplot.legend(loc='best')
+    if show_fig:
+        pyplot.show()
+    pyplot.savefig(outputfile, bbox_inches='tight')
+    pyplot.clf()
+
+
 def plot_paddle_curve(keys, inputfile, outputfile, format='png',
                       show_fig=False):
     """Plot curves from paddle log and save to outputfile.
@@ -130,6 +186,7 @@ def main(argv):
         help='output filename of figure, '
         'default will be standard output')
     cmdparser.add_argument('--format', help='figure format(png|pdf|ps|eps|svg)')
+    cmdparser.add_argument('-v', '--version', help='the version of plotting')
     args = cmdparser.parse_args(argv)
     keys = args.key
     if args.input:
@@ -145,7 +202,13 @@ def main(argv):
                 format = 'png'
     else:
         outputfile = sys.stdout
-    plot_paddle_curve(keys, inputfile, outputfile, format)
+
+    version = args.version
+    if not version:
+        plot_paddle_curve(keys, inputfile, outputfile, format)
+    elif version == 'v2':
+        plot_paddle_curve_v2(keys, inputfile, outputfile, format)
+
     inputfile.close()
     outputfile.close()
 
