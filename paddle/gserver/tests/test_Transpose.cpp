@@ -17,7 +17,7 @@ limitations under the License. */
 #include <vector>
 #include "ModelConfig.pb.h"
 #include "paddle/gserver/layers/DataLayer.h"
-#include "paddle/gserver/layers/ExpandConvTransLayer.h"
+#include "paddle/gserver/layers/TransposeLayer.h"
 #include "paddle/math/MathUtils.h"
 #include "paddle/trainer/Trainer.h"
 #include "paddle/utils/GlobalConstants.h"
@@ -48,15 +48,10 @@ TEST(Layer, TransposeLayer) {
   config.layerConfig.set_width(WIDTH);
   config.inputDefs.push_back({INPUT_DATA, "layer_0", INPUT_SIZE, 0});
 
-  LayerInputConfig* input = config.layerConfig.add_inputs();
-  TransposeConfig* transpose = input->mutable_transpose_conf();
-  transpose->set_trans_order_w(1);
-  transpose->set_trans_order_h(2);
-  transpose->set_trans_order_c(0);
-
   for (auto useGpu : {false, true}) {
     testLayerGrad(config, "transpose", 100, false, useGpu);
   }
+
 }
 
 int main(int argc, char** argv) {

@@ -7,6 +7,14 @@ add_unittest_without_exec(test_Transpose
 add_test(NAME test_Transpose
     COMMAND test_Transpose)
 
+################# test_TransposeLayer #######################
+add_unittest_without_exec(test_Warp2D
+    test_Warp2D.cpp
+    LayerGradUtil.cpp)
+
+add_test(NAME test_Warp2D
+    COMMAND test_Warp2D)
+
 ################### test_ProtoDataProvider ############
 add_unittest_without_exec(test_ProtoDataProvider
     test_ProtoDataProvider.cpp)

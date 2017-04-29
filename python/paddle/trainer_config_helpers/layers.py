@@ -53,7 +53,8 @@ __all__ = [
     'multi_binary_label_cross_entropy', 'sum_cost', 'rank_cost', 'lambda_cost',
     'huber_cost', 'block_expand_layer', 'maxout_layer', 'out_prod_layer',
     'print_layer', 'priorbox_layer', 'cross_channel_norm_layer', 'spp_layer',
-    'pad_layer', 'eos_layer', 'layer_support', 'resize_layer', 'transpose_layer'
+    'pad_layer', 'eos_layer', 'layer_support', 'resize_layer', 'transpose_layer',
+    'warp2d_layer'
 ]
 
 
@@ -104,6 +105,7 @@ class LayerType(object):
     ROTATE_LAYER = 'rotate'
     RESIZE_LAYER = 'resize'
     TRANSPOSE_LAYER = 'transpose'
+    WARP2D_LAYER = 'warp2d'
     OUT_PROD_LAYER = 'out_prod'
     FEATURE_MAP_EXPAND_LAYER = 'featmap_expand'
 
@@ -1841,6 +1843,7 @@ def rotate_layer(input, height, width, name=None, layer_attr=None):
     :rtype: LayerOutput
     """
     assert isinstance(input, LayerOutput)
+    
     l = Layer(
         name=name,
         height=height,
@@ -1852,6 +1855,49 @@ def rotate_layer(input, height, width, name=None, layer_attr=None):
         name=name,
         layer_type=LayerType.ROTATE_LAYER,
         parents=[input],
+        size=l.config.size)
+
+
+@wrap_name_default()
+@layer_support()
+def warp2d_layer(input, name=None, layer_attr=None):
+    """
+    A layer for warp a input tensor, using optical flow
+
+    .. math::
+       y(j,i,:) = x(i+f(i),j+f(j),:)
+
+    where :math:`x` is (M x N x C) input, and :math:`y` is (N x M x C) output.
+
+    The example usage is:
+
+    .. code-block:: python
+
+       rot = rotate_layer(input=[layer, opt_flow])
+
+    :param input: Input layer.
+    :type input: LayerOutput
+    :param height: The height of the sample matrix
+    :type height: int
+    :param name: Layer name.
+    :type name: basestring
+    :param layer_attr: extra layer attributes.
+    :type layer_attr: ExtraLayerAttribute.
+    :return: LayerOutput object.
+    :rtype: LayerOutput
+    """
+    assert isinstance(input, list|tuple):
+    assert 2 == len(input)
+
+    l = Layer(
+        name=name,
+        type=LayerType.WARP2D_LAYER,
+        inputs=[x.name for x in input],
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+    return LayerOutput(
+        name=name,
+        layer_type=LayerType.WARP2D_LAYER,
+        parents=input,
         size=l.config.size)
 
 

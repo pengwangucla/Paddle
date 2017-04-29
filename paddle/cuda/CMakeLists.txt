@@ -41,6 +41,7 @@ set(CUDA_CU_SOURCES
     src/hl_cuda_cnn.cu
     src/hl_cuda_lstm.cu
     src/hl_top_k.cu
+    src/hl_warp2d.cu
     src/hl_batch_transpose.cu
     src/hl_cuda_sequence.cu
     src/hl_table_apply.cu)
@@ -73,6 +74,7 @@ set(CUDA_HEADERS
     include/hl_table_apply.h
     include/hl_gpu.h
     include/hl_top_k.h
+    include/hl_warp2d.h
     include/hl_matrix.h
     include/hl_cnn.h)
 

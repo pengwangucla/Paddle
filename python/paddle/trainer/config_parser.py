@@ -1957,6 +1957,18 @@ class PadLayer(LayerBase):
         self.config.size = out_ch * out_h * out_w
 
 
+@config_layer('warp2d')
+class Warp2DLayer(LayerBase):
+    def __init__(self, name, inputs, **xargs):
+        super(Warp2DLayer, self).__init__(name, 'warp', 0, inputs=inputs, **xargs)
+        config_assert(len(self.inputs) == 1,
+            'Warp2D must have one and only one input')
+        input = self.get_input_layer(0)
+        self.set_layer_height_width(g_layer_map[input.name].height,
+                                    g_layer_map[input.name].width)
+        self.set_layer_size(input.size)
+
+
 @config_layer('transpose')
 class TransposeLayer(LayerBase):
     def __init__(self, name, inputs, **xargs):

@@ -70,7 +70,7 @@ def plot_paddle_curve_v2(keys,
     :param outputfile: a file object for output
     :return: None
     """
-    pass_pattern = r"Pass ([0-9]*)"
+    pass_pattern = r"Pass ([0-9]*), Batch ([0-9]*)"
     test_pattern = r"Test samples ([0-9]*)"
     if not keys:
         keys = ['Cost']
@@ -89,17 +89,19 @@ def plot_paddle_curve_v2(keys,
         if found_test:
             test_data.append([float(x) for x in found_test.groups()])
     x = numpy.array(data)
+    x[:, 2:] = numpy.log(x[:, 2:])
     x_test = numpy.array(test_data)
     if x.shape[0] <= 0:
         sys.stderr.write("No data to plot. Exiting!\n")
         return
-    m = len(keys) + 1
-    for i in xrange(1, m):
+    batch_num = 800
+    m = len(keys) + 2
+    for i in xrange(2, m):
         pyplot.plot(
-            x[:, 0],
+            x[:, 0]* batch_num + x[:, 1],
             x[:, i],
             color=cm.jet(1.0 * (i - 1) / (2 * m)),
-            label=keys[i - 1])
+            label=keys[i - 2])
         if (x_test.shape[0] > 0):
             pyplot.plot(
                 x[:, 0],
