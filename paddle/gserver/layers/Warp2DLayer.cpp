@@ -34,10 +34,10 @@ bool Warp2DLayer::init(const LayerMap& layerMap,
 void Warp2DLayer::forward(PassType passType) {
   Layer::forward(passType);
 
-  MatrixPtr image = getInputValue(0);
+  MatrixPtr input = getInputValue(0);
   MatrixPtr flow = getInputValue(1);
-  batchSize_ = image->getHeight();
-  size_ = image->getWidth();
+  batchSize_ = input->getHeight();
+  size_ = input->getWidth();
   channel_ = size_ / height_ / width_;
 
   CHECK_EQ(flow->getWidth() / 2, height_ * width_);
@@ -46,12 +46,14 @@ void Warp2DLayer::forward(PassType passType) {
   MatrixPtr warp_image = getOutputValue();
 
   if(useGpu_) {
-    hl_warp2d_forward(image->getData(),
-                      flow->getData(),
-                      warp_image->getData(),
-                      channel_,
-                      height_,
-                      width_);
+    for (int b = 0; b < batchSize_; b ++) {
+      hl_warp2d_forward(input->getData() + b * size_,
+                        flow->getData() + b * flow->getWidth(),
+                        warp_image->getData() + b * size_,
+                        channel_,
+                        height_,
+                        width_);
+    }
   }
   else {
     CHECK_EQ(1, 0)<<"Not implemented";

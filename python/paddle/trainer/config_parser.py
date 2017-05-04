@@ -917,7 +917,7 @@ class Pad(Cfg):
 
 @config_class
 class Transpose(Cfg):
-    def __init__(self, channels, trans_order_w, trans_order_h, trans_order_c):
+    def __init__(self, channels, trans_order_c, trans_order_h, trans_order_w):
         self.add_keys(locals())
 
 
@@ -1969,6 +1969,17 @@ class Warp2DLayer(LayerBase):
         self.set_layer_size(input.size)
 
 
+@config_layer('trans_depth_flow')
+class TransDepthFlowLayer(LayerBase):
+    def __init__(self, name, inputs, **xargs):
+        super(TransDepthFLowLayer, self).__init__(
+            name, 'trans_depth_flow', 0, inputs=inputs, **xargs)
+        config_assert(
+            len(self.inputs) == 2,
+            'TransDepthFlowLayer must have one and only one input')
+        self.set_layer_size(self.get_input_layer(0).size)
+
+
 @config_layer('transpose')
 class TransposeLayer(LayerBase):
     def __init__(self, name, inputs, **xargs):
@@ -1989,7 +2000,8 @@ class TransposeLayer(LayerBase):
         image_conf = self.config.inputs[0].transpose_conf.image_conf
         parse_image(transpose, input_layer.name, image_conf)
 
-        self.set_layer_height_width(image_conf.img_size_y, image_conf.img_size)
+        self.set_layer_height_width(image_conf.img_size_y,
+                                    image_conf.img_size)
         self.set_layer_size(self.get_input_layer(0).size)
 
 

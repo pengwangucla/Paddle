@@ -13,11 +13,24 @@
 # limitations under the License.
 
 __all__ = [
-    "TanhActivation", "SigmoidActivation", "SoftmaxActivation",
-    "IdentityActivation", "LinearActivation", 'SequenceSoftmaxActivation',
-    'ExpActivation', "ReluActivation", "BReluActivation", "SoftReluActivation",
-    "STanhActivation", "AbsActivation", "SquareActivation", "BaseActivation",
-    "LogActivation"
+    "TanhActivation",
+    "SigmoidActivation",
+    "SoftmaxActivation",
+    "IdentityActivation",
+    "LinearActivation",
+    "SqrtActivation",
+    "SequenceSoftmaxActivation",
+    'ExpActivation',
+    "ReluActivation",
+    "LeakyReluActivation",
+    "BReluActivation",
+    "SoftReluActivation",
+    "STanhActivation",
+    "AbsActivation", 
+    "SquareActivation", 
+    "BaseActivation",
+    "LogActivation",
+    "PowActivation"
 ]
 
 
@@ -113,6 +126,31 @@ class IdentityActivation(BaseActivation):
 LinearActivation = IdentityActivation
 
 
+class SqrtActivation(BaseActivation):
+    """
+    Sqrt Activation.
+
+    .. math::
+       f(z) = z^{1/2}.
+    """
+
+    def __init__(self):
+        BaseActivation.__init__(self, 'sqrt', False)
+
+
+class PowActivation(BaseActivation):
+    """
+    Sqrt Activation.
+
+    .. math::
+       f(z) = z^{-1}.
+    """
+
+    def __init__(self):
+        BaseActivation.__init__(self, 'pow', False)
+
+
+
 class ReluActivation(BaseActivation):
     """
     Relu activation.
@@ -129,6 +167,24 @@ class ReluActivation(BaseActivation):
 
     def __init__(self):
         BaseActivation.__init__(self, 'relu', True)
+
+
+class LeakyReluActivation(BaseActivation):
+    """
+    Relu activation.
+
+    forward. :math:`y = max(0.1 * z, z)`
+
+    derivative:
+
+    .. math::
+
+       1  &\\quad if z >= 0 \\\\
+       a  &\\quad if z < 0
+    """
+
+    def __init__(self):
+        BaseActivation.__init__(self, 'leaky_relu', False)
 
 
 class BReluActivation(BaseActivation):

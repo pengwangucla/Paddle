@@ -54,7 +54,7 @@ __all__ = [
     'huber_cost', 'block_expand_layer', 'maxout_layer', 'out_prod_layer',
     'print_layer', 'priorbox_layer', 'cross_channel_norm_layer', 'spp_layer',
     'pad_layer', 'eos_layer', 'layer_support', 'resize_layer', 'transpose_layer',
-    'warp2d_layer'
+    'warp2d_layer', 'trans_depth_flow_layer'
 ]
 
 
@@ -100,11 +100,12 @@ class LayerType(object):
     INTERPOLATION_LAYER = 'interpolation'
     BILINEAR_INTERP_LAYER = 'bilinear_interp'
     POWER_LAYER = 'power'
-    SCALING_LAYER = 'scaling'
-    TRANS_LAYER = 'trans'
     ROTATE_LAYER = 'rotate'
     RESIZE_LAYER = 'resize'
+    SCALING_LAYER = 'scaling'
     TRANSPOSE_LAYER = 'transpose'
+    TRANS_LAYER = 'trans'
+    TRANS_DEPTH_FLOW_LAYER = 'trans_depth_flow'
     WARP2D_LAYER = 'warp2d'
     OUT_PROD_LAYER = 'out_prod'
     FEATURE_MAP_EXPAND_LAYER = 'featmap_expand'
@@ -1865,7 +1866,6 @@ def warp2d_layer(input, name=None, layer_attr=None):
     A layer for warp a input tensor, using optical flow
 
     .. math::
-       y(j,i,:) = x(i+f(i),j+f(j),:)
 
     where :math:`x` is (M x N x C) input, and :math:`y` is (N x M x C) output.
 
@@ -1886,7 +1886,7 @@ def warp2d_layer(input, name=None, layer_attr=None):
     :return: LayerOutput object.
     :rtype: LayerOutput
     """
-    assert isinstance(input, list|tuple):
+    assert isinstance(input, collections.Sequence)
     assert 2 == len(input)
 
     l = Layer(
@@ -1899,6 +1899,44 @@ def warp2d_layer(input, name=None, layer_attr=None):
         layer_type=LayerType.WARP2D_LAYER,
         parents=input,
         size=l.config.size)
+
+
+@wrap_name_default()
+@layer_support()
+def trans_depth_flow_layer(input, trans, depth2flow=True,
+                           name=None, layer_attr=None):
+    """
+    A layer for transfer between depth and flow.
+
+    The example usage is:
+
+    .. code-block:: python
+
+       trans = trans_layer(input=layer)
+
+    :param input: Input layer.
+    :type input: LayerOutput
+    :param name: Layer name.
+    :type name: basestring
+    :param layer_attr: extra layer attributes.
+    :type layer_attr: ExtraLayerAttribute.
+    :return: LayerOutput object.
+    :rtype: LayerOutput
+    """
+    assert isinstance(input, LayerOutput) and \
+           isinstance(trans, LayerOutput)
+
+    Layer(
+        name=name,
+        type=LayerType.TRANS_DEPTH_FLOW_LAYER,
+        inputs=[input.name],
+        **ExtraAttr.to_kwargs(layer_attr))
+    return LayerOutput(
+        name,
+        layer_type=LayerType.TRANS_DEPTH_FLOW_LAYER,
+        parents=[input],
+        size=input.size)
+
 
 
 @wrap_name_default()
@@ -1936,14 +1974,10 @@ def transpose_layer(input,
     num_channels = input.num_filters
     assert len(trans_order) == 3
 
-    trans_order_new = [0, 0, 0]
-    for i in range(3):
-        trans_order_new[trans_order[i]] = i
-
-    out_ch = None
-    if height and width:
-        out_ch = [width, height, num_channels]
-        out_ch = out_ch[trans_order[2]]
+    # out_ch = None
+    # if height and width:
+    #     out_ch = [num_channels, height, width]
+    #     out_ch = out_ch[0]
 
     l = Layer(
         name=name,
@@ -1952,15 +1986,14 @@ def transpose_layer(input,
             input.name,
             transpose=Transpose(
                 channels=num_channels,
-                trans_order_w=trans_order_new[0],
-                trans_order_h=trans_order_new[1],
-                trans_order_c=trans_order_new[2])),
+                trans_order_c=trans_order[0],
+                trans_order_h=trans_order[1],
+                trans_order_w=trans_order[2])),
         **ExtraLayerAttribute.to_kwargs(layer_attr))
     return LayerOutput(
         name,
         layer_type=LayerType.TRANSPOSE_LAYER,
         parents=[input],
-        num_filters=out_ch,
         size=l.config.size)
 
 

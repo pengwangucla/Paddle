@@ -35,21 +35,105 @@ DECLARE_bool(thread_local_rand_use_global_seed);
 DECLARE_bool(prev_batch_state);
 
 // Test that the convTrans forward is the same as conv backward
+void doOneTransposeTest(MatrixPtr& tensor,
+                        std::vector<int> transOrder,
+                        MatrixPtr& result,
+                        size_t height,
+                        size_t width,
+                        size_t channel,
+                        bool useGpu ){
+
+  TestConfig config;
+  config.layerConfig.set_type("transpose");
+  config.layerConfig.set_height(height);
+  config.layerConfig.set_width(width);
+  config.layerConfig.set_size(height * width * channel);
+
+  config.inputDefs.push_back(
+    {INPUT_DATA, "layer_0", height * width * channel, 0});
+  LayerInputConfig* input = config.layerConfig.add_inputs();
+
+  std::vector<DataLayerPtr> dataLayers;
+  LayerMap layerMap;
+  vector<Argument> datas;
+  initDataLayer(
+      config, &dataLayers, &datas, &layerMap, "transpose",
+      1, false, useGpu);
+
+  dataLayers[0]->getOutputValue()->zeroMem();
+  dataLayers[0]->getOutputValue()->copyFrom(*tensor);
+
+  TransposeConfig* transpose = input->mutable_transpose_conf();
+  transpose->set_trans_order_c(transOrder[0]);
+  transpose->set_trans_order_h(transOrder[1]);
+  transpose->set_trans_order_w(transOrder[2]);
+
+  std::vector<ParameterPtr> parameters;
+  LayerPtr transposeLayer;
+  initTestLayer(config, &layerMap, &parameters, &transposeLayer);
+  transposeLayer->forward(PASS_GC);
+  
+  checkMatrixEqual(transposeLayer->getOutputValue(), result);
+
+}
+
+
 TEST(Layer, TransposeLayer) {
   TestConfig config;
   config.biasSize = 0;
   config.layerConfig.set_type("transpose");
   const int CHANNEL = 2;
-  const int HEIGHT = 8;
-  const int WIDTH = 4;
+  const int HEIGHT = 4;
+  const int WIDTH = 2;
   const int INPUT_SIZE = HEIGHT * WIDTH * CHANNEL;
+  std::vector<int> order0 = std::vector<int>{1, 2, 0},
+                   order1 = std::vector<int>{2, 0, 1};
+
   config.layerConfig.set_size(INPUT_SIZE);
   config.layerConfig.set_height(HEIGHT);
   config.layerConfig.set_width(WIDTH);
   config.inputDefs.push_back({INPUT_DATA, "layer_0", INPUT_SIZE, 0});
 
+  LayerInputConfig* input = config.layerConfig.add_inputs();
+  TransposeConfig* transpose = input->mutable_transpose_conf();
+
+  MatrixPtr tensor, result120, result201;
+  
+  tensor = Matrix::create(1, size_t(INPUT_SIZE), false, false);
+  real tensorData[] = {1, 2, 2, 2,
+                       1, 2, 4, 4,
+                       4, 2, 2, 4,
+                       4, 4, 2, 2};
+  tensor->setData(tensorData);
+
+  result120 = Matrix::create(1, size_t(INPUT_SIZE), false, false);
+
+  real result120Data[] = {1, 4, 2, 2,
+                          2, 2, 2, 4,
+                          1, 4, 2, 4,
+                          4, 2, 4, 2};
+  result120->setData(result120Data);
+
+  //test forward correctness
   for (auto useGpu : {false, true}) {
-    testLayerGrad(config, "transpose", 100, false, useGpu);
+    doOneTransposeTest(tensor, order0, result120,
+      size_t(HEIGHT), size_t(WIDTH), size_t(CHANNEL), useGpu);
+    doOneTransposeTest(result120, order1, tensor,
+      size_t(HEIGHT), size_t(WIDTH), size_t(CHANNEL), useGpu);
+  }
+  LOG(INFO) << "Pass forward, test";
+
+  //test backward correctness
+  for (auto useGpu : {false, true}) {
+    transpose->set_trans_order_c(order0[0]);
+    transpose->set_trans_order_h(order0[1]);
+    transpose->set_trans_order_w(order0[2]);
+    testLayerGrad(config, "transpose", 10, false, useGpu);
+
+    transpose->set_trans_order_c(order1[0]);
+    transpose->set_trans_order_h(order1[1]);
+    transpose->set_trans_order_w(order1[2]);
+    testLayerGrad(config, "transpose", 10, false, useGpu);
   }
 
 }

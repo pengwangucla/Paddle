@@ -61,11 +61,12 @@ void TransposeLayer::transpose(real* input,
 bool TransposeLayer::init(const LayerMap& layerMap,
                           const ParameterMap& parameterMap) {
   Layer::init(layerMap, parameterMap);
-
+  // original order is C x H x W ()
+  // new order is first second and third order, same with np.transpose
   CHECK_EQ(inputLayers_.size(), 1UL);
-  transOrder_.push_back(config_.inputs(0).transpose_conf().trans_order_w());
-  transOrder_.push_back(config_.inputs(0).transpose_conf().trans_order_h());
   transOrder_.push_back(config_.inputs(0).transpose_conf().trans_order_c());
+  transOrder_.push_back(config_.inputs(0).transpose_conf().trans_order_h());
+  transOrder_.push_back(config_.inputs(0).transpose_conf().trans_order_w());
 
   height_ = config_.height();
   width_ = config_.width();

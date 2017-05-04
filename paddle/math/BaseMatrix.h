@@ -588,6 +588,14 @@ public:
 
   /**
    * @code
+   * b = max(p * this, this)
+   * @endcode
+   */
+  void leakyRelu(BaseMatrixT& b, T p);
+  void leakyReluDerivative(BaseMatrixT& b, T p);
+
+  /**
+   * @code
    * b = log(1.0 + exp(this))
    * @endcode
    */
@@ -655,14 +663,18 @@ public:
    * b = a
    * @endcode
    */
+  void exp2(BaseMatrixT& b);
   void expDerivative(BaseMatrixT& b);
 
   void sign2(BaseMatrixT& b);
-
-  void exp2(BaseMatrixT& b);
   void pow2(BaseMatrixT& b, T p);
+  void powDerivative(BaseMatrixT& b, T p);
+
   void log2(BaseMatrixT& b);
+
   void sqrt2(BaseMatrixT& b);
+  void sqrtDerivative(BaseMatrixT& b);
+
   void addScalar(BaseMatrixT& b, T p);
   void subScalar(BaseMatrixT& b, T p);
   void mulScalar(BaseMatrixT& b, T p);

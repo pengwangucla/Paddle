@@ -7,7 +7,15 @@ add_unittest_without_exec(test_Transpose
 add_test(NAME test_Transpose
     COMMAND test_Transpose)
 
-################# test_TransposeLayer #######################
+################# test_TransDepthFlow #######################
+add_unittest_without_exec(test_TransDepthFlow
+    test_TransDepthFlow.cpp
+    LayerGradUtil.cpp)
+
+add_test(NAME test_TransDepthFlow
+    COMMAND test_TransDepthFlow)
+
+################# test_Warp2D #######################
 add_unittest_without_exec(test_Warp2D
     test_Warp2D.cpp
     LayerGradUtil.cpp)

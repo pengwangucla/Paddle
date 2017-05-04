@@ -403,7 +403,9 @@ DEFINE_MATRIX_UNARY_OP(One, a = 1);
 template<class T>
 void BaseMatrixT<T>::one() { applyUnary(unary::One<T>()); }
 
-DEFINE_MATRIX_UNARY_PARAMETER_OP(Pow, ONE_PARAMETER, a = pow(a, p));
+
+DEFINE_MATRIX_UNARY_PARAMETER_OP(Pow, ONE_PARAMETER,
+   a = p >= 0.0f ? pow(a, p) : 0.0f);
 template<>
 void BaseMatrixT<real>::pow2(real p) {
   if (useGpu_) {
@@ -532,7 +534,8 @@ void BaseMatrixT<T>::add(BaseMatrixT& b, T p) {
   applyBinary(binary::Add1<T>(p), b);
 }
 
-DEFINE_MATRIX_BINARY_PARAMETER_OP(Pow, ONE_PARAMETER, a = pow(b, p));
+DEFINE_MATRIX_BINARY_PARAMETER_OP(Pow, ONE_PARAMETER,
+   a = b != 0.0f ? pow(b, p) : 0.0f);
 template<>
 void BaseMatrixT<real>::pow2(BaseMatrixT& b, real p) {
   if (useGpu_) {
@@ -541,6 +544,16 @@ void BaseMatrixT<real>::pow2(BaseMatrixT& b, real p) {
     vPow(height_ * width_, b.data_, p, data_);
   }
 }
+
+
+DEFINE_MATRIX_BINARY_PARAMETER_OP(PowDerivative, ONE_PARAMETER,
+                        a *=  b != 0.0f ? p * pow(b, p - 1) : 0.0f);
+template<>
+void BaseMatrixT<real>::powDerivative(BaseMatrixT& b, real p) {
+  //CHECK(useGpu_) << "pow derivative do not support cpu";
+  applyBinary(binary::PowDerivative<real>(p), b);
+}
+
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(Add2, TWO_PARAMETER, a = p1 * a + p2 * b);
 template<class T>
@@ -576,6 +589,21 @@ template<class T>
 void BaseMatrixT<T>::reluDerivative(BaseMatrixT& b) {
   applyBinary(binary::ReluDerivative<T>(), b);
 }
+
+
+DEFINE_MATRIX_BINARY_PARAMETER_OP(LeakyRelu, ONE_PARAMETER,
+                                  b = a > 0.0f ? a : p);
+template<class T>
+void BaseMatrixT<T>::leakyRelu(BaseMatrixT& b, T p) { 
+  applyBinary(binary::LeakyRelu<T>(p), b); }
+
+DEFINE_MATRIX_BINARY_PARAMETER_OP(LeakyReluDerivative, ONE_PARAMETER,
+                                  a *= (b > 0.0f ? 1.0f : p));
+template<class T>
+void BaseMatrixT<T>::leakyReluDerivative(BaseMatrixT& b, T p) {
+  applyBinary(binary::LeakyReluDerivative<T>(p), b);
+}
+
 
 DEFINE_MATRIX_BINARY_OP(Softrelu, const T THRESHOLD = 40.0;
                         b = log(1.0 + exp((a > THRESHOLD)
@@ -623,6 +651,19 @@ DEFINE_MATRIX_BINARY_OP(SquareDerivative, a *= 2.0 * b);
 template<class T>
 void BaseMatrixT<T>::squareDerivative(BaseMatrixT& b) {
   applyBinary(binary::SquareDerivative<T>(), b);
+}
+
+DEFINE_MATRIX_BINARY_OP(Sqrt, a = b > 0.0f? sqrt(b) : 0.0f);
+template<>
+void BaseMatrixT<real>::sqrt2(BaseMatrixT& b) {
+  applyBinary(binary::Sqrt<real>(), b);
+}
+
+DEFINE_MATRIX_BINARY_OP(SqrtDerivative,
+                        a *= b > 0.0f ? 0.5f / sqrt(b) : 0.0f);
+template<>
+void BaseMatrixT<real>::sqrtDerivative(BaseMatrixT& b) {
+  applyBinary(binary::SqrtDerivative<real>(), b);
 }
 
 DEFINE_MATRIX_BINARY_OP(Tanh,
@@ -747,12 +788,6 @@ void BaseMatrixT<real>::log2(BaseMatrixT& b) {
   } else {
     vLog(height_ * width_, b.data_, data_);
   }
-}
-
-DEFINE_MATRIX_BINARY_OP(Sqrt, a = sqrt(b));
-template<>
-void BaseMatrixT<real>::sqrt2(BaseMatrixT& b) {
-  applyBinary(binary::Sqrt<real>(), b);
 }
 
 DEFINE_MATRIX_BINARY_OP(InvSqrt, a = 1.0f / sqrt(b));

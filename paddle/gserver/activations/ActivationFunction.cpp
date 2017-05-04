@@ -102,6 +102,7 @@ Error __must_check backward(Argument& act) {
 }
 END_DEFINE_ACTIVATION(sigmoid)
 
+
 /**
  * @brief Softmax Activation
  * \f[
@@ -237,6 +238,34 @@ Error __must_check backward(Argument& act) {
 END_DEFINE_ACTIVATION(relu)
 
 /**
+ * @brief Leaky Relu Activation.
+ * forward. y = max(a * z, z)
+ *
+ * derivative of leak relu is:
+ *
+ *    1 if z >= 0
+ *
+ *    a if z < 0.
+ */
+BEGIN_DEFINE_ACTIVATION(leaky_relu)
+private:
+real p;
+
+public:
+ACTIVATION_CLASS_NAME(leaky_relu)() : p(0.1) {}
+Error __must_check forward(Argument& act) {
+  act.value->leakyRelu(*act.value, p);
+  return Error();
+}
+
+Error __must_check backward(Argument& act) {
+  act.grad->leakyReluDerivative(*act.value, p);
+  return Error();
+}
+END_DEFINE_ACTIVATION(leaky_relu)
+
+
+/**
  * @brief BRelu Activation.
  *
  * forward. y = min(24, max(0, z))
@@ -260,6 +289,7 @@ Error __must_check backward(Argument& act) {
   return Error();
 }
 END_DEFINE_ACTIVATION(brelu)
+
 
 /**
  * @brief Tanh Activation.
@@ -377,6 +407,62 @@ Error __must_check backward(Argument& act) {
   return Error();
 }
 END_DEFINE_ACTIVATION(square)
+
+/**
+ * @brief Sqrt Activation
+ * \f[
+ * f(z) = z^{1/2}
+ * \f]
+ */
+BEGIN_DEFINE_ACTIVATION(sqrt)
+Error __must_check forward(Argument& act) {
+  SetDevice device(act.deviceId);
+  Matrix::resizeOrCreate(act.in,
+                         act.value->getHeight(),
+                         act.value->getWidth(),
+                         /* trans */ false,
+                         useGpu(act.deviceId));
+
+  act.in->copyFrom(*act.value);
+  act.value->sqrt2(*act.value);
+  return Error();
+}
+Error __must_check backward(Argument& act) {
+  act.grad->sqrtDerivative(*act.in);
+  return Error();
+}
+END_DEFINE_ACTIVATION(sqrt)
+
+/**
+ * @brief Pow Activation
+ * \f[
+ * f(z) = z^{p}
+ * \f]
+ */
+BEGIN_DEFINE_ACTIVATION(pow)
+private:
+real p;
+
+public:
+ACTIVATION_CLASS_NAME(pow)() : p(-1.) {}
+Error __must_check forward(Argument& act) {
+  SetDevice device(act.deviceId);
+  Matrix::resizeOrCreate(act.in,
+                         act.value->getHeight(),
+                         act.value->getWidth(),
+                         /* trans */ false,
+                         useGpu(act.deviceId));
+
+  act.in->copyFrom(*act.value);
+  act.value->pow2(*act.value, p);
+  return Error();
+}
+Error __must_check backward(Argument& act) {
+  act.grad->powDerivative(*act.in, p);
+  return Error();
+}
+END_DEFINE_ACTIVATION(pow)
+
 
 /**
  * @brief Exponential Activation.
