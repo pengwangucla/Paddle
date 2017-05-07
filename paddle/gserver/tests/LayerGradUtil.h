@@ -60,7 +60,7 @@ struct ParaSparse {
 struct InputDef {
   InputType inputType;
   string name;
-  size_t dim;
+  size_t dim;  // input size for each item in batch
   size_t paraSize;
   ParaSparse sparse;
   bool isStatic;

@@ -224,4 +224,23 @@ extern void hl_matrix_collect_shared_bias(real* B_d,
 extern void hl_matrix_rotate(
     real* mat, real* matRot, int dimM, int dimN, bool clockWise);
 
+
+
+/**
+ * @brief  Matrix slice to a sub matrix
+ *
+ * @param[in]   mat       input matrix (M x N).
+ * @param[out]  matRot    output matrix (N x M).
+ * @param[in]   dimM      input matrix height.
+ * @param[in]   dimN      input matrix width.
+ * @param[in]   clockWise rotation direction
+ */
+extern void hl_matrix_slice(real* input,
+                     real* output,
+                     const int* in_shape,
+                     const int shape_dim,
+                     const int begin,
+                     const int slice_size,
+                     const int slice_axis,
+                     const bool is_forward);
 #endif /* HL_MATRIX_H_ */

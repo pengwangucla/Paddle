@@ -35,7 +35,17 @@ extern void hl_warp2d_forward(real *input,
                               const int height,
                               const int width);
 
-
+/**
+ * @brief   transform between depth and flow given extern matrix
+ *
+ * @param[in]   input          the 2d input tensor (C x H x W)
+ * @param[in]   flow           optical flow to the 2d image.
+ * @param[out]  output         top k index.
+ * @param[in]   channels       channel number.
+ * @param[in]   lds            height of the tensor.
+ * @param[in]   dim            width of the tensor
+ *
+ */
 extern void hl_trans_depth_flow_forward(real *input,
                               real *trans, 
                               real *output,

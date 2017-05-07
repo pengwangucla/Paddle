@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. */
 
-
+#include <stdio.h>
 #include "hl_base.h"
 #include "hl_matrix.h"
 #include "hl_matrix_ops.cuh"
@@ -640,4 +640,89 @@ void hl_matrix_rotate(real *mat, real* matRot,
     keMatrixRotate<<< blocks, threads, 0, STREAM_DEFAULT >>>
             (mat, matRot, dimM, dimN, clockWise);
     CHECK_SYNC("hl_matrix_rotate failed");
+}
+
+
+__global__ void keMatrixSlice(const int n,
+                              real *input,
+                              real *output,
+                              const int* in_shape,
+                              const int begin,
+                              const int slice_size,
+                              const int slice_axis,
+                              const bool is_forward) {
+  // slice the input 
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < n) {
+      int shape_dim = 4;
+
+      int* coor_out = new int[shape_dim];
+      int* coor_in = new int[shape_dim];
+      int* cur_prod_in = new int[shape_dim + 1];
+      int* cur_prod_out = new int[shape_dim + 1];
+      int* out_shape = new int[shape_dim];
+
+      cur_prod_in[shape_dim] = 1;
+      cur_prod_out[shape_dim] = 1;
+
+      for(int i = shape_dim - 1; i >= 0; -- i) {
+        cur_prod_in[i] = cur_prod_in[i + 1] * in_shape[i];
+        cur_prod_out[i] = cur_prod_out[i + 1] * 
+                (i == slice_axis ? slice_size : in_shape[i]);
+        out_shape[i] = (i == slice_axis ? slice_size : in_shape[i]);
+      }
+
+      for(int i = shape_dim - 1; i >= 0; --i) {
+          coor_out[i] = (idx / cur_prod_out[i + 1]) % out_shape[i];
+          coor_in[i] = i == slice_axis ? coor_out[i] + begin : coor_out[i];
+      }
+
+      int in_idx = 0;
+      for(int i = shape_dim - 1; i >= 0; --i) {
+        in_idx += coor_in[i] * cur_prod_in[i + 1];
+      }
+
+      if(is_forward) {
+        output[idx] = input[in_idx];
+      }
+      else {
+        output[in_idx] = input[idx];
+      }
+
+      delete[] coor_out;
+      delete[] coor_in;
+      delete[] cur_prod_out;
+      delete[] cur_prod_in;
+      delete[] out_shape;
+    }
+}
+
+void hl_matrix_slice(real* input,
+                     real* output,
+                     const int* in_shape,
+                     const int out_size,
+                     const int begin,
+                     const int slice_size,
+                     const int slice_axis,
+                     const bool is_forward) {
+
+    CHECK_NOTNULL(input);
+    CHECK_NOTNULL(output);
+    // currently only support slice up to 4 dimension
+    const int threads = 512;
+    const int blocks = DIVUP(out_size, threads);
+
+    keMatrixSlice<<< blocks, threads, 0, STREAM_DEFAULT >>>
+            (out_size,
+             input,
+             output,
+             in_shape,
+             begin,
+             slice_size,
+             slice_axis,
+             is_forward);
+
+    CHECK_SYNC("hl_matrix_slice failed"); 
+
 }

@@ -277,6 +277,12 @@ message TransposeConfig {
   required uint32 trans_order_w = 4;
 }
 
+message SliceConfig {
+  required uint32 begin = 1;
+  required uint32 size = 2;
+  required uint32 axis = 3 [default = 0];
+}
+
 message TransDepthFlowConfig {
   optional bool depth_to_flow = 1 [default = true];
 }
@@ -300,6 +306,7 @@ message LayerInputConfig {
   optional PadConfig pad_conf = 14;
   optional TransposeConfig transpose_conf = 15;
   optional TransDepthFlowConfig trans_depth_flow_conf = 16;
+  optional SliceConfig slice_conf = 17;
 }
 
 message LayerConfig {
