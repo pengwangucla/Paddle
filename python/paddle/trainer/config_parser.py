@@ -495,6 +495,7 @@ class Input(Cfg):
             spp=None,
             pad=None,
             transpose=None,
+            slice=None,
             format=None,
             nnz=None,
             is_static=None,
@@ -920,6 +921,11 @@ class Transpose(Cfg):
     def __init__(self, channels, trans_order_c, trans_order_h, trans_order_w):
         self.add_keys(locals())
 
+
+@config_class
+class Slice(Cfg):
+    def __init__(self, channels, begin, size, axis):
+        self.add_keys(locals())
 
 @config_class
 class Norm(Cfg):
@@ -1997,12 +2003,45 @@ class TransposeLayer(LayerBase):
             transpose.trans_order_w
 
         input_layer = self.get_input_layer(0)
-        image_conf = self.config.inputs[0].transpose_conf.image_conf
-        parse_image(transpose, input_layer.name, image_conf)
+        shape_in = [transpose.channels, input_layer.height, input_layer.width]
 
-        self.set_layer_height_width(image_conf.img_size_y,
-                                    image_conf.img_size)
-        self.set_layer_size(self.get_input_layer(0).size)
+        self.set_layer_height_width(shape_in[trans_order_h]
+                                    shape_in[trans_order_w])
+        self.set_layer_size(input_layer.size)
+
+
+@config_layer('slice')
+class SliceLayer(LayerBase):
+    def __init__(self, name, inputs, **xargs):
+        super(SliceLayer, self).__init__(
+            name, 'slice', 0, inputs=inputs, **xargs)
+        config_assert(
+            len(self.inputs) == 1,
+            'SliceLayer must have one and only one input')
+
+        slice = self.inputs[0].slice
+        self.config.inputs[0].slice_conf.begin = \
+            slice.begin
+        self.config.inputs[0].slice_conf.size = \
+            slice.size
+        self.config.inputs[0].slice_conf.axis = \
+            slice.axis
+
+        input_layer = self.get_input_layer(0)
+        assert input_layer.width > 0
+        assert input_layer.height > 0
+
+        batch_size = input_layer.size / \
+            (input_layer.height * input_layer.width * slice.channels)
+
+        channel_out = slice.size if axis == 1 else slice.channels
+        height_out = slice.size if axis == 2 else input_layer.height
+        width_out = slice.size if axis == 3 else input_layer.width
+        size_out = channel_out * height_out * width_out
+
+        self.set_layer_height_width(height_out, width_out)
+        self.set_layer_size(size_out)
+        self.config.num_filters = channel_out
 
 
 @config_layer('batch_norm')

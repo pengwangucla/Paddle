@@ -54,7 +54,7 @@ __all__ = [
     'huber_cost', 'block_expand_layer', 'maxout_layer', 'out_prod_layer',
     'print_layer', 'priorbox_layer', 'cross_channel_norm_layer', 'spp_layer',
     'pad_layer', 'eos_layer', 'layer_support', 'resize_layer', 'transpose_layer',
-    'warp2d_layer', 'trans_depth_flow_layer'
+    'warp2d_layer', 'trans_depth_flow_layer', 'slice_layer'
 ]
 
 
@@ -104,6 +104,7 @@ class LayerType(object):
     RESIZE_LAYER = 'resize'
     SCALING_LAYER = 'scaling'
     TRANSPOSE_LAYER = 'transpose'
+    SLICE_LAYER = 'slice'
     TRANS_LAYER = 'trans'
     TRANS_DEPTH_FLOW_LAYER = 'trans_depth_flow'
     WARP2D_LAYER = 'warp2d'
@@ -1809,7 +1810,10 @@ def resize_layer(input, size, name=None, layer_attr=None):
         size=size,
         inputs=[input.name],
         **ExtraAttr.to_kwargs(layer_attr))
-    return LayerOutput(name, LayerType.RESIZE_LAYER, parents=[input], size=size)
+    return LayerOutput(name,
+                       LayerType.RESIZE_LAYER,
+                       parents=[input],
+                       size=size)
 
 
 @wrap_name_default()
@@ -1993,6 +1997,66 @@ def transpose_layer(input,
     return LayerOutput(
         name,
         layer_type=LayerType.TRANSPOSE_LAYER,
+        parents=[input],
+        size=l.config.size)
+
+
+@wrap_name_default()
+@layer_support()
+def slice_layer(input,
+                begin,
+                size,
+                axis,
+                name=None,
+                layer_attr=None):
+    """
+    A layer for transpose the order of height width and channel
+    .. math::
+    The example usage is:
+
+    .. code-block:: python
+
+       rot = rotate_layer(input=layer,
+                          height=100,
+                          width=100)
+
+    :param input: Input layer.
+    :type input: LayerOutput
+    :param trans_order: The order of transpose for a tensor.
+    :type trans_order: List
+    :param name: Layer name.
+    :type name: basestring
+    :param layer_attr: extra layer attributes.
+    :type layer_attr: ExtraLayerAttribute.
+    :return: LayerOutput object.
+    :rtype: LayerOutput
+    """
+    assert isinstance(input, LayerOutput)
+    assert input.num_filters is not None
+    num_channels = input.num_filters
+    assert len(begin) == 3
+
+    out_ch = size if axis == 1 else num_channels
+
+    # if height and width:
+    #     out_ch = [num_channels, height, width]
+    #     out_ch = out_ch[0]
+
+    l = Layer(
+        name=name,
+        type=LayerType.SLICE_LAYER,
+        inputs=Input(
+            input.name,
+            slice=Slice(
+                channels=num_channels,
+                begin=begin,
+                size=size,
+                axis=axis)),
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+    return LayerOutput(
+        name,
+        num_filters=out_ch,
+        layer_type=LayerType.SLICE_LAYER,
         parents=[input],
         size=l.config.size)
 
