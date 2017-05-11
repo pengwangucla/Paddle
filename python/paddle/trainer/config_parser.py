@@ -2005,8 +2005,8 @@ class TransposeLayer(LayerBase):
         input_layer = self.get_input_layer(0)
         shape_in = [transpose.channels, input_layer.height, input_layer.width]
 
-        self.set_layer_height_width(shape_in[trans_order_h]
-                                    shape_in[trans_order_w])
+        self.set_layer_height_width(shape_in[transpose.trans_order_h],
+                                    shape_in[transpose.trans_order_w])
         self.set_layer_size(input_layer.size)
 
 
@@ -2028,15 +2028,17 @@ class SliceLayer(LayerBase):
             slice.axis
 
         input_layer = self.get_input_layer(0)
-        assert input_layer.width > 0
-        assert input_layer.height > 0
 
-        batch_size = input_layer.size / \
-            (input_layer.height * input_layer.width * slice.channels)
+        if input_layer.height == 0 and input_layer.width == 0:
+            input_layer.height = 1
+            input_layer.width = 1
+        else:            
+            assert input_layer.width > 0
+            assert input_layer.height > 0
 
-        channel_out = slice.size if axis == 1 else slice.channels
-        height_out = slice.size if axis == 2 else input_layer.height
-        width_out = slice.size if axis == 3 else input_layer.width
+        channel_out = slice.size if slice.axis == 1 else slice.channels
+        height_out = slice.size if slice.axis == 2 else input_layer.height
+        width_out = slice.size if slice.axis == 3 else input_layer.width
         size_out = channel_out * height_out * width_out
 
         self.set_layer_height_width(height_out, width_out)

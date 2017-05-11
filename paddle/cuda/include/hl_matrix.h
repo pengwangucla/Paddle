@@ -239,8 +239,10 @@ extern void hl_matrix_slice(real* input,
                      real* output,
                      const int* in_shape,
                      const int shape_dim,
+                     const int out_size,
                      const int begin,
                      const int slice_size,
                      const int slice_axis,
                      const bool is_forward);
+
 #endif /* HL_MATRIX_H_ */

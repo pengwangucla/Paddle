@@ -592,7 +592,7 @@ void BaseMatrixT<T>::reluDerivative(BaseMatrixT& b) {
 
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(LeakyRelu, ONE_PARAMETER,
-                                  b = a > 0.0f ? a : p);
+                                  b = a >= 0.0f ? a : p * a);
 template<class T>
 void BaseMatrixT<T>::leakyRelu(BaseMatrixT& b, T p) { 
   applyBinary(binary::LeakyRelu<T>(p), b); }

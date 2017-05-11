@@ -37,8 +37,8 @@ __global__ void Warp2DForward(real* input,
       // which channel 
       const int pix_num = height * width;
       // from the 
-      float xx = float(w) + flow[index];
-      float yy = float(h) + flow[index + pix_num];
+      float xx = float(w) + flow[index] * float(width);
+      float yy = float(h) + flow[index + pix_num] * float(height);
       
       float x1 = float(floorf(xx));
       float x2 = x1 + 1.0;

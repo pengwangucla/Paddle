@@ -94,10 +94,11 @@ TEST(Layer, Warp2DLayer) {
 
   flow = Matrix::create(1, size_t(2 * HEIGHT * WIDTH),
                         false, false);
-  real flowData[] = {-1, -1, -1, -1, 
-                     -1, -1, -1, -1,
-                     1, 1, 1, 1,
-                     1, 1, 1, 1,
+  //normalized flow
+  real flowData[] = {-0.25, -0.25, -0.25, -0.25, 
+                     -0.25, -0.25, -0.25, -0.25,
+                     0.25, 0.25, 0.25, 0.25,
+                     0.25, 0.25, 0.25, 0.25,
                      0, 0, 0, 0,
                      0, 0, 0, 0,
                      0, 0, 0, 0,

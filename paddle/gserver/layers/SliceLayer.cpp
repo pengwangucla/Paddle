@@ -41,12 +41,13 @@ private:
   int size_;
   int height_;
   int width_;
+  int shape_dim_;
   IVectorPtr shape;
 
   int begin_idx_;
   int slice_size_;
   int slice_axis_;
-  int out_size_;
+  int out_size_;    // output size after slice
 };
 
 
@@ -56,21 +57,34 @@ bool SliceLayer::init(const LayerMap& layerMap,
   if (!Layer::init(layerMap, parameterMap)) return false;
   CHECK_EQ(1U, inputLayers_.size());
   // batchsize, channel, height, width
-  shape = IVector::create(size_t(4), useGpu_);
-  shape->zeroMem();
 
-  height_ = config_.height();
-  width_ = config_.width();
-  shape->setElement(2, config_.height());
-  shape->setElement(3, config_.width());
-  CHECK_GT(shape->getElement(2), 0);
-  CHECK_GT(shape->getElement(3), 0);
+  if(config_.has_width() && config_.has_height()) {
+    shape = IVector::create(size_t(4), useGpu_);
+    shape->zeroMem();
+    height_ = config_.height();
+    width_ = config_.width();
+    shape_dim_ = 4;
+
+    shape->setElement(2, config_.height());
+    shape->setElement(3, config_.width());
+    CHECK_GT(shape->getElement(2), 0);
+    CHECK_GT(shape->getElement(3), 0);
+  }
+  else {
+    shape = IVector::create(size_t(2), useGpu_);
+    shape->zeroMem();
+    shape_dim_ = 2;
+    height_ = 1;
+    width_ = 1;
+  }
 
   begin_idx_ = config_.inputs(0).slice_conf().begin();
   slice_size_ = config_.inputs(0).slice_conf().size();
   slice_axis_ = config_.inputs(0).slice_conf().axis();
 
+  CHECK_GT(shape_dim_, slice_axis_);
   setNeedSequenceInfo(false);
+
   return true;
 }
 
@@ -83,7 +97,7 @@ void SliceLayer::forward(PassType passType) {
   shape->setElement(1, size_ / height_ /width_);
 
   out_size_ = 1;
-  for(int i = 0; i < 4; i ++)
+  for(int i = 0; i < shape_dim_; i ++)
     out_size_ *= (i == slice_axis_? slice_size_ :shape->getElement(i));
 
   CHECK_GE(shape->getElement(slice_axis_),
@@ -105,6 +119,7 @@ void SliceLayer::forward(PassType passType) {
       hl_matrix_slice(input->getData(),
         output->getData(),
         shape->getData(),
+        shape_dim_,
         out_size_,
         begin_idx_,
         slice_size_,
@@ -139,6 +154,7 @@ void SliceLayer::backward(const UpdateCallback& callback) {
       hl_matrix_slice(outputGrad->getData(),
         tmpGrad->getData(),
         shape->getData(),
+        shape_dim_,
         out_size_,
         begin_idx_,
         slice_size_,
@@ -155,6 +171,7 @@ void SliceLayer::backward(const UpdateCallback& callback) {
       hl_matrix_slice(outputGrad->getData(),
         tmpGrad->getData(),
         shape->getData(),
+        shape_dim_,
         out_size_,
         begin_idx_,
         slice_size_,

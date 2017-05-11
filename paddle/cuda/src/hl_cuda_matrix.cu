@@ -647,6 +647,7 @@ __global__ void keMatrixSlice(const int n,
                               real *input,
                               real *output,
                               const int* in_shape,
+                              const int shape_dim,
                               const int begin,
                               const int slice_size,
                               const int slice_axis,
@@ -655,7 +656,6 @@ __global__ void keMatrixSlice(const int n,
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < n) {
-      int shape_dim = 4;
 
       int* coor_out = new int[shape_dim];
       int* coor_in = new int[shape_dim];
@@ -701,6 +701,7 @@ __global__ void keMatrixSlice(const int n,
 void hl_matrix_slice(real* input,
                      real* output,
                      const int* in_shape,
+                     const int shape_dim,
                      const int out_size,
                      const int begin,
                      const int slice_size,
@@ -709,6 +710,7 @@ void hl_matrix_slice(real* input,
 
     CHECK_NOTNULL(input);
     CHECK_NOTNULL(output);
+    
     // currently only support slice up to 4 dimension
     const int threads = 512;
     const int blocks = DIVUP(out_size, threads);
@@ -718,6 +720,7 @@ void hl_matrix_slice(real* input,
              input,
              output,
              in_shape,
+             shape_dim,
              begin,
              slice_size,
              slice_axis,

@@ -50,6 +50,7 @@ def wrap_param_default(param_names=None,
             for name in param_names:
                 if not_set_callback(kwargs, name):  # Not set
                     kwargs[name] = default_factory(func)
+
             return func(*args, **kwargs)
 
         if hasattr(func, 'argspec'):
