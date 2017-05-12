@@ -1618,6 +1618,8 @@ class FCLayer(LayerBase):
             self.create_input_parameter(input_index, psize, dims, sparse,
                                         format)
         self.create_bias_parameter(bias, self.config.size)
+        self.set_layer_height_width(1, 1)
+
 
 
 @config_layer('selective_fc')
@@ -1966,9 +1968,9 @@ class PadLayer(LayerBase):
 @config_layer('warp2d')
 class Warp2DLayer(LayerBase):
     def __init__(self, name, inputs, **xargs):
-        super(Warp2DLayer, self).__init__(name, 'warp', 0, inputs=inputs, **xargs)
-        config_assert(len(self.inputs) == 1,
-            'Warp2D must have one and only one input')
+        super(Warp2DLayer, self).__init__(name, 'warp2d', 0, inputs=inputs, **xargs)
+        config_assert(len(self.inputs) == 2,
+            'Warp2D must have two and only two input')
         input = self.get_input_layer(0)
         self.set_layer_height_width(g_layer_map[input.name].height,
                                     g_layer_map[input.name].width)
@@ -1982,7 +1984,10 @@ class TransDepthFlowLayer(LayerBase):
             name, 'trans_depth_flow', 0, inputs=inputs, **xargs)
         config_assert(
             len(self.inputs) == 2,
-            'TransDepthFlowLayer must have one and only one input')
+            'TransDepthFlowLayer must have two and only two input')
+        input = self.get_input_layer(0)
+        self.set_layer_height_width(g_layer_map[input.name].height,
+                                    g_layer_map[input.name].width)
         self.set_layer_size(self.get_input_layer(0).size)
 
 

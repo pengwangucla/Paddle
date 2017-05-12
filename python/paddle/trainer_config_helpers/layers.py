@@ -889,7 +889,8 @@ def fc_layer(input,
         active_type=act.name,
         **ExtraLayerAttribute.to_kwargs(layer_attr))
     return LayerOutput(
-        name, LayerType.FC_LAYER, input, activation=act, size=size)
+        name, LayerType.FC_LAYER, input,
+        activation=act, num_filters=size, size=size)
 
 
 @wrap_name_default("print")
@@ -1738,6 +1739,7 @@ def scaling_layer(input, weight, name=None, layer_attr=None):
     assert isinstance(weight, LayerOutput) and isinstance(input, LayerOutput)
     if weight.size is not None:
         assert weight.size == 1
+
     Layer(
         name=name,
         type=LayerType.SCALING_LAYER,
@@ -1890,8 +1892,10 @@ def warp2d_layer(input, name=None, layer_attr=None):
     :return: LayerOutput object.
     :rtype: LayerOutput
     """
+
     assert isinstance(input, collections.Sequence)
     assert 2 == len(input)
+    assert input[0].num_filters is not None
 
     l = Layer(
         name=name,
@@ -1902,6 +1906,7 @@ def warp2d_layer(input, name=None, layer_attr=None):
         name=name,
         layer_type=LayerType.WARP2D_LAYER,
         parents=input,
+        num_filters=input[0].num_filters,
         size=l.config.size)
 
 
@@ -1936,7 +1941,7 @@ def trans_depth_flow_layer(input, trans, depth2flow=True,
         inputs=[input.name],
         **ExtraAttr.to_kwargs(layer_attr))
     return LayerOutput(
-        name,
+        name=name,
         layer_type=LayerType.TRANS_DEPTH_FLOW_LAYER,
         parents=[input],
         size=input.size)
@@ -1990,7 +1995,7 @@ def transpose_layer(input,
                 trans_order_w=trans_order[2])),
         **ExtraLayerAttribute.to_kwargs(layer_attr))
     return LayerOutput(
-        name,
+        name=name,
         layer_type=LayerType.TRANSPOSE_LAYER,
         parents=[input],
         size=l.config.size)
@@ -2025,8 +2030,12 @@ def slice_layer(input,
     :rtype: LayerOutput
     """
     assert isinstance(input, LayerOutput)
-    assert input.num_filters is not None
-    num_channels = input.num_filters
+    if input.num_filters is not None:
+        num_channels = input.num_filters
+    else:
+        num_channels = input.size
+        assert axis <= 1
+
     assert begin is not None
     assert size is not None
     assert axis is not None
@@ -2046,7 +2055,7 @@ def slice_layer(input,
         **ExtraLayerAttribute.to_kwargs(layer_attr))
 
     return LayerOutput(
-        name,
+        name=name,
         num_filters=out_ch,
         layer_type=LayerType.SLICE_LAYER,
         parents=[input],
