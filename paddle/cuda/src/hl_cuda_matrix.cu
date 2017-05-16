@@ -643,6 +643,61 @@ void hl_matrix_rotate(real *mat, real* matRot,
 }
 
 
+__global__ void keMatrixSmoothL1(real* output, real* label, real* cost,
+                                 int height, int width) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < height * width) {
+       real diff = fabsf(output[idx] - label[idx]);
+       cost[idx] = diff > 1.0 ? diff - 0.5 : diff * diff * 0.5;
+    }
+}
+
+
+void hl_matrix_smoothl1(real* output, real* label, real* cost,
+                        int height, int width) {
+    CHECK_NOTNULL(output);
+    CHECK_NOTNULL(label);
+    CHECK_NOTNULL(cost);
+    const int threads = 1024;
+    const int blocks = DIVUP(height * width, threads);
+    keMatrixSmoothL1<<< blocks, threads, 0, STREAM_DEFAULT >>>
+            (output, label, cost, height, width);
+    CHECK_SYNC("hl_matrix_smoothl1 failed");
+}
+
+
+__global__ void KeMatrixSmoothL1Derivative(real* output,
+                                         real* label,
+                                         real* grad,
+                                         int height,
+                                         int width) {
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < height * width) {
+       real diff = output[idx] - label[idx];
+       real sign = diff > 0 ? 1.0 : -1.0;
+       grad[idx] = fabsf(diff) > 1.0 ? sign : diff;
+    }
+}
+
+
+void hl_matrix_smoothl1_derivative(real *output,
+                                 real *label,
+                                 real *grad,
+                                 int height,
+                                 int width) {
+  CHECK_NOTNULL(grad);
+  CHECK_NOTNULL(output);
+  CHECK_NOTNULL(label);
+  const int threads = 1024;
+  const int blocks = DIVUP(height * width, threads);
+
+  KeMatrixSmoothL1Derivative<<< blocks, threads, 0, STREAM_DEFAULT >>>
+            (output, label, grad, height, width);
+  CHECK_SYNC("hl_matrix_smoothl1_derivative failed");
+}
+
+
 __global__ void keMatrixSlice(const int n,
                               real *input,
                               real *output,

@@ -32,6 +32,21 @@ DECLARE_double(checkgrad_eps);
 DECLARE_bool(thread_local_rand_use_global_seed);
 DECLARE_bool(prev_batch_state);
 
+TEST(Layer, smooth_l1) {
+  TestConfig config;
+  config.layerConfig.set_type("smooth_l1");
+
+  config.inputDefs.push_back({INPUT_DATA, "layer_0", 10, 0});
+  config.inputDefs.push_back({INPUT_DATA_TARGET, "layer_1", 10, 0});
+  config.layerConfig.add_inputs();
+  config.layerConfig.add_inputs();
+
+  for (auto useGpu : {true}) {
+    testLayerGrad(config, "smooth_l1", 100, false, useGpu, false, 2.0);
+  }
+}
+
+
 TEST(Operator, dot_mul) {
   TestConfig config;
   config.layerConfig.set_size(10);
@@ -1350,30 +1365,6 @@ TEST(Layer, RotateLayer) {
   }
 }
 
-TEST(Layer, TransposeLayer) {
-  TestConfig config;
-  config.biasSize = 0;
-  config.layerConfig.set_type("transpose");
-  const int CHANNEL = 2;
-  const int HEIGHT = 8;
-  const int WIDTH = 4;
-  const int INPUT_SIZE = HEIGHT * WIDTH * CHANNEL;
-  config.layerConfig.set_size(INPUT_SIZE);
-  config.layerConfig.set_height(HEIGHT);
-  config.layerConfig.set_width(WIDTH);
-  config.inputDefs.push_back({INPUT_DATA, "layer_0", INPUT_SIZE, 0});
-
-  LayerInputConfig* input = config.layerConfig.add_inputs();
-  TransposeConfig* transpose = input->mutable_transpose_conf();
-  transpose->set_trans_order_w(1);
-  transpose->set_trans_order_h(2);
-  transpose->set_trans_order_c(0);
-
-  for (auto useGpu : {false, true}) {
-    testLayerGrad(config, "transpose", 100, false, useGpu);
-  }
-}
-
 TEST(Layer, NCELayer) {
   TestConfig config;
   size_t numClasses = 4;
@@ -1697,20 +1688,6 @@ TEST(Layer, CrossChannelNormLayer) {
 
   for (auto useGpu : {false, true}) {
     testLayerGrad(config, "cross-channel-norm", 10, false, useGpu, false, 5);
-  }
-}
-
-TEST(Layer, smooth_l1) {
-  TestConfig config;
-  config.layerConfig.set_type("smooth_l1");
-
-  config.inputDefs.push_back({INPUT_DATA, "layer_0", 1, 0});
-  config.inputDefs.push_back({INPUT_DATA_TARGET, "layer_1", 1, 0});
-  config.layerConfig.add_inputs();
-  config.layerConfig.add_inputs();
-
-  for (auto useGpu : {false, true}) {
-    testLayerGrad(config, "smooth_l1", 100, false, useGpu, false, 2.0);
   }
 }
 

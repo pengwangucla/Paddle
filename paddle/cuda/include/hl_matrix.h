@@ -225,6 +225,31 @@ extern void hl_matrix_rotate(
     real* mat, real* matRot, int dimM, int dimN, bool clockWise);
 
 
+/**
+ * @brief  Matrix smoothl1 loss
+ *
+ * @param[in]   mat       input matrix (M x N).
+ * @param[out]  matRot    output matrix (N x M).
+ * @param[in]   dimM      input matrix height.
+ * @param[in]   dimN      input matrix width.
+ * @param[in]   clockWise rotation direction
+ */
+extern void hl_matrix_smoothl1(
+    real* output, real* label, real* cost, int height, int width);
+
+
+/**
+ * @brief  Matrix smooth l1 derivative
+ *
+ * @param[in]   mat       input matrix (M x N).
+ * @param[out]  matRot    output matrix (N x M).
+ * @param[in]   dimM      input matrix height.
+ * @param[in]   dimN      input matrix width.
+ * @param[in]   clockWise rotation direction
+ */
+extern void hl_matrix_smoothl1_derivative(
+    real* output, real* label, real* grad, int height, int width);
+
 
 /**
  * @brief  Matrix slice to a sub matrix

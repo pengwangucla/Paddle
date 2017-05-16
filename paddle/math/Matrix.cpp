@@ -954,6 +954,44 @@ void GpuMatrix::sumOfSquaresBp(Matrix& outputV, Matrix& label) {
   add2(outputV, label, 1, 2, -2);
 }
 
+// for smooth L1 loss
+void GpuMatrix::smoothL1(Matrix& output, Matrix& label) {
+  CHECK_EQ(label.getHeight(), height_);
+  CHECK_EQ(output.getHeight(), height_);
+  CHECK_EQ(label.getWidth(), output.getWidth());
+  CHECK_EQ((size_t)1, width_);
+
+  auto labelptr = dynamic_cast<GpuSparseMatrix*>(&label);
+  if (labelptr) {
+    LOG(FATAL) << "not supported: GpuSparseMatrix as label";
+  }
+  MatrixPtr cost_ele = Matrix::create(height_, output.getWidth(),
+                                  false, true);
+  zeroMem();
+  cost_ele->zeroMem();
+  real* out = output.getData();
+  real* gt = label.getData();
+
+  hl_matrix_smoothl1(out, gt, cost_ele->getData(),
+                     output.getHeight(), output.getWidth());
+  cost_ele->rowSum(*this);
+}
+
+void GpuMatrix::smoothL1Bp(Matrix& output, Matrix& label) {
+  CHECK_EQ(label.getHeight(), height_);
+  CHECK_EQ(output.getHeight(), height_);
+  CHECK_EQ(label.getWidth(), width_);
+  CHECK_EQ(output.getWidth(), width_);
+
+  MatrixPtr grad = Matrix::create(height_, width_, false, true);
+  real* out = output.getData();
+  real* gt = label.getData();
+
+  hl_matrix_smoothl1_derivative(out, gt, grad->getData(), height_, width_);
+  this->add(*grad);
+}
+
+
 void GpuMatrix::tanh(Matrix& output) { BaseMatrix::tanh(output); }
 
 void GpuMatrix::tanhDerivative(Matrix& output) {
@@ -3616,17 +3654,18 @@ void CpuMatrix::smoothL1(Matrix& output, Matrix& label) {
   CHECK_EQ(output.getHeight(), numSamples);
   CHECK_EQ(label.getWidth(), dim);
   CHECK_EQ(getWidth(), (size_t)1);
+  zeroMem();
   real* out = output.getData();
   real* cost = getData();
   real* lbl = label.getData();
 
   for (size_t i = 0; i < numSamples; ++i, out += dim, cost += dim, lbl += dim) {
     for (size_t j = 0; j < dim; ++j) {
-      cost[j] = std::fabs(out[j] - lbl[j]);
-      if (cost[j] < 1.0)
-        cost[j] = 0.5 * cost[j] * cost[j];
+      real cost_ele = std::fabs(out[j] - lbl[j]);
+      if (cost_ele < 1.0)
+        cost[i] += 0.5 * cost_ele * cost_ele;
       else
-        cost[j] = cost[j] - 0.5;
+        cost[i] += cost_ele - 0.5;
     }
   }
 }

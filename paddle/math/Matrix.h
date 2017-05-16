@@ -1313,9 +1313,12 @@ public:
 
   /// calculate the sum of squares diff cost.
   void sumOfSquares(Matrix& output, Matrix& label);
-
   /// gradient of sumOfSquares.
   void sumOfSquaresBp(Matrix& outputV, Matrix& label);
+
+  void smoothL1(Matrix& output, Matrix& label);
+  void smoothL1Bp(Matrix& output, Matrix& label);
+  
   void tanh(Matrix& output);
   void tanhDerivative(Matrix& output);
   void softrelu(Matrix& output);

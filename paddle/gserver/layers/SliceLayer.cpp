@@ -21,8 +21,6 @@ namespace paddle {
 /**
  * @brief A layer for resizing a minibatch matrix
  * @note
- * origin matrix height * width)
- * resize matrix: (height * width / size) * size
  */
 
 class SliceLayer : public Layer {

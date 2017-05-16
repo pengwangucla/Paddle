@@ -1,0 +1,35 @@
+type: "nn"
+layers {
+  name: "input"
+  type: "data"
+  size: 300
+  active_type: ""
+  height: 100
+  width: 3
+}
+layers {
+  name: "__slice_0__"
+  type: "slice"
+  size: 150
+  active_type: ""
+  inputs {
+    input_layer_name: "input"
+    pad_conf {
+      begin: 0
+      size: 50
+      axis: 2
+    }
+  }
+  height: 50
+  width: 3
+}
+input_layer_names: "input"
+output_layer_names: "__slice_0__"
+sub_models {
+  name: "root"
+  layer_names: "input"
+  layer_names: "__slice_0__"
+  input_layer_names: "input"
+  output_layer_names: "__slice_0__"
+  is_recurrent_layer_group: false
+}
