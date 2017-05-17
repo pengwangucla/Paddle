@@ -48,7 +48,6 @@ public:
   // The creation function's arguments are CreateArgs
   void registerClass(const std::string& type, ClassCreator creator) {
     CHECK(creatorMap_.count(type) == 0) << "Duplicated class type: " << type;
-    LOG(INFO) << "registra" << type; 
     creatorMap_[type] = creator;
   }
 
@@ -63,12 +62,8 @@ public:
   // Create a class instance of type @type using args
   BaseClass* createByType(const std::string& type, CreateArgs... args) {
     ClassCreator creator;
-    LOG(INFO) << "registrar_ " ;
-    for (auto it = creatorMap_.begin(); it != creatorMap_.end(); ++it) {
-      LOG(INFO) << it->first;
-    }
-    // CHECK(mapGet(type, creatorMap_, &creator)) << "Unknown class type: "
-    //                                            << type;
+    CHECK(mapGet(type, creatorMap_, &creator)) << "Unknown class type: "
+                                               << type;
     return creator(args...);
   }
 

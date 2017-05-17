@@ -15,7 +15,6 @@ third_party/
 *~
 bazel-*
 third_party/
-cmake-3.4.1/
 
 *.log
 

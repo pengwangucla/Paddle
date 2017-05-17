@@ -2722,7 +2722,16 @@ class ScalingLayer(LayerBase):
             name, 'scaling', 0, inputs=inputs, device=device)
         config_assert(len(inputs) == 2, 'ScalingLayer must have 2 inputs')
         input_layer1 = self.get_input_layer(1)
-        self.set_layer_size(input_layer1.size)
+        if input_layer1.HasField('height') and input_layer1.HasField('width'):
+            config_assert(
+                input_layer1.size % input_layer1.height * input_layer1.width == 0,
+                'input layer size must equal to height * width')
+            channel = input_layer1.size / input_layer1.height / input_layer1.width
+            self.set_cnn_layer(name, input_layer1.height, input_layer1.width,
+                               channel)
+        else:
+            self.set_layer_size(input_layer1.size)
+
         input_layer0 = self.get_input_layer(0)
         config_assert(1 == input_layer0.size,
                       'The left input should be of size 1')

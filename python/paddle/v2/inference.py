@@ -52,10 +52,13 @@ class Inference(object):
                 retv = [[]] * len(result)
             for i, item in enumerate(result):
                 retv[i].append(item)
-        retv = [numpy.concatenate(out) for out in retv]
+
+        # retv = [numpy.concatenate(out) for out in retv]
         if len(retv) == 1:
-            return retv[0]
+            # means only one field is included
+            return retv[0] if len(retv[0]) > 1 else retv[0][0]
         else:
+            # means multiple fields are included
             return retv
 
 
