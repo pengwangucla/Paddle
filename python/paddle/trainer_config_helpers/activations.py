@@ -30,7 +30,7 @@ __all__ = [
     "SquareActivation", 
     "BaseActivation",
     "LogActivation",
-    "PowActivation"
+    "InvActivation"
 ]
 
 
@@ -138,7 +138,7 @@ class SqrtActivation(BaseActivation):
         BaseActivation.__init__(self, 'sqrt', False)
 
 
-class PowActivation(BaseActivation):
+class InvActivation(BaseActivation):
     """
     Sqrt Activation.
 

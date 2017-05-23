@@ -606,7 +606,8 @@ class MixedLayerType(LayerOutput):
         def __init__(self):
             Exception.__init__(self)
 
-    def __init__(self, name, size, act, bias_attr, layer_attr, parents=None):
+    def __init__(self, name, size, num_filters, act,\
+     bias_attr, layer_attr, parents=None):
         """
         Ctor.
         :param name: layer name.
@@ -629,6 +630,7 @@ class MixedLayerType(LayerOutput):
             LayerType.MIXED_LAYER,
             parents,
             size=size,
+            num_filters=num_filters,
             activation=act)
         self.bias_attr = bias_attr
         self.layer_attr = layer_attr
@@ -680,6 +682,7 @@ class MixedLayerType(LayerOutput):
 @wrap_bias_attr_default(has_bias=False)
 @layer_support(ERROR_CLIPPING, DROPOUT)
 def mixed_layer(size=0,
+                num_filters=None,
                 input=None,
                 name=None,
                 act=None,
@@ -726,19 +729,24 @@ def mixed_layer(size=0,
     """
 
     if input is None:
-        return MixedLayerType(name, size, act, bias_attr, layer_attr)
+        return MixedLayerType(name, size, num_filters, act,\
+            bias_attr, layer_attr)
     else:
+        if not isinstance(input, collections.Sequence):
+            input = [input]
+
+        size = input[0].origin.size
+        num_filters = input[0].origin.num_filters
+
         with mixed_layer(
                 name=name,
                 size=size,
+                num_filters=num_filters,
                 act=act,
                 bias_attr=bias_attr,
                 layer_attr=layer_attr) as m:
-            if isinstance(input, collections.Sequence):
-                for each in input:
-                    m += each
-            else:
-                m += input
+            for each in input:
+                m += each
         return m
 
 
@@ -1740,13 +1748,20 @@ def scaling_layer(input, weight, name=None, layer_attr=None):
     if weight.size is not None:
         assert weight.size == 1
 
+    out_ch = None
+    if input.num_filters is not None:
+        out_ch = input.num_filters
+
     Layer(
         name=name,
         type=LayerType.SCALING_LAYER,
         inputs=[weight.name, input.name],
         **ExtraAttr.to_kwargs(layer_attr))
     return LayerOutput(
-        name, LayerType.SCALING_LAYER, parents=[weight, input], size=input.size)
+        name, LayerType.SCALING_LAYER,
+        parents=[weight, input],
+        size=input.size,
+        num_filters = out_ch)
 
 
 @wrap_name_default()
@@ -1912,7 +1927,7 @@ def warp2d_layer(input, name=None, layer_attr=None):
 
 @wrap_name_default()
 @layer_support()
-def trans_depth_flow_layer(input, trans, depth2flow=True,
+def trans_depth_flow_layer(input, depth2flow=True,
                            name=None, layer_attr=None):
     """
     A layer for transfer between depth and flow.
@@ -1932,20 +1947,22 @@ def trans_depth_flow_layer(input, trans, depth2flow=True,
     :return: LayerOutput object.
     :rtype: LayerOutput
     """
-    assert isinstance(input, LayerOutput) and \
-           isinstance(trans, LayerOutput)
+    assert isinstance(input, collections.Sequence)
+    assert 2 == len(input)
 
-    Layer(
+    l = Layer(
         name=name,
         type=LayerType.TRANS_DEPTH_FLOW_LAYER,
-        inputs=[input.name],
+        inputs=[x.name for x in input],
+        depth2flow=depth2flow,
         **ExtraAttr.to_kwargs(layer_attr))
+
     return LayerOutput(
         name=name,
         layer_type=LayerType.TRANS_DEPTH_FLOW_LAYER,
-        parents=[input],
-        size=input.size)
-
+        parents=input,
+        num_filters=2 if depth2flow else 1,
+        size=l.config.size)
 
 
 @wrap_name_default()
@@ -2311,7 +2328,7 @@ def img_conv_layer(input,
     :rtype: LayerOutput
     """
     if num_channels is None:
-        assert input.num_filters is not None
+        assert input.num_filters is not None, name + ' num_filters is None'
         num_channels = input.num_filters
 
     if filter_size_y is None:
@@ -2952,6 +2969,7 @@ def concat_layer(input, act=None, name=None, layer_attr=None, bias_attr=None):
         if input_i.num_filters is not None:
             num_channels += input_i.num_filters
         else:
+            logger.warning(input_i.name + " has None num_filters")
             num_channels = None
             break
 

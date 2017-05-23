@@ -15,6 +15,8 @@ limitations under the License. */
 #include <cmath>
 #include "hl_base.h"
 #include "paddle/utils/Logging.h"
+#include <stdio.h>
+#
 
 
 #define CUDA_KERNEL_LOOP(i, n) \
@@ -49,9 +51,11 @@ __global__ void Warp2DForward(real* input,
 
       if (x1 < 0. || x1 > width-1. ||
           y1 < 0. || y1 > height-1.) {
+          // index of a perticular r/g/b pixel in image:
+          //  h * width + w + (n*channels +  cc)*height*width
           for (int cc = 0; cc<channel; cc++){
                int off =  cc * height * width;
-               output[w + h * width + off] = 0;// index of a perticular r/g/b pixel in image:  h * width + w + (n*channels +  cc)*height*width
+               output[w + h * width + off] = 0;
           }
       }
       else if (x2 > width-1. || y2 > height-1. ) {
@@ -69,11 +73,13 @@ __global__ void Warp2DForward(real* input,
           float val_up, val_down, val;
           val_up = (x2-xx) * input[int(x1) + int(y1) * width + off] + 
                    (xx-x1) * input[int(x2) + int(y1) * width + off];
+          // I_in_x_y2 /= (x2-x1);  
           val_down = (x2-xx) * input[int(x1) + int(y2) * width + off] + 
-                     (xx-x1) * input[int(x2) + int(y2) * width + off];// I_in_x_y2 /= (x2-x1);  
-          val = (y2-yy) * val_up + (yy-y1) * val_down; //I_in_xy /= (y2-y1);
+                     (xx-x1) * input[int(x2) + int(y2) * width + off];
+          //I_in_xy /= (y2-y1);
+          val = (y2-yy) * val_up + (yy-y1) * val_down; 
           output[w + h * width + off] =  val;
-        }           
+        } 
       }
   }
 }
@@ -128,60 +134,6 @@ __device__ inline void Angle2Matrix(const real* ang,
     }
 }
 
-// trans: [fx, fy, ux, uy, a1, a2, a3, t1, t2, t3]
-__global__ void Depth2FlowForward(real* depth,
-                              real* trans, 
-                              real* flow,
-                              const int batch_size,
-                              const int height,
-                              const int width) {
-
-  int nthreads = height * width * batch_size;
-  CUDA_KERNEL_LOOP(index, nthreads) {
-
-    // transfer depth to 3d
-    real x = real(index % width);
-    real y = real((index / width) % height);
-    int batch_id = index / (height * width);
-    int image_size = height * width;
-
-    real* cur_trans = trans + 10 * batch_id;
-
-    real* f = cur_trans;
-    real* u = cur_trans + 2;
-    real* r = cur_trans + 4;
-    real* t = cur_trans + 7;
-
-    
-    real x_3d[3] = {0.0f, 0.0f, 0.0f};
-    x_3d[0] = (x - u[0]) / f[0] * depth[index];
-    x_3d[1] = (y - u[1]) / f[1] * depth[index];
-    x_3d[2] = depth[index];
-
-    real R[9];
-    Angle2Matrix(r, R);
-
-    // project 3d to the second image
-    real x_tmp_3d[3] = {0.f, 0.f, 0.f};
-    for(int i = 0; i < 3; i ++)
-      for(int j = 0; j < 3; j ++)
-        x_tmp_3d[i] += R[i*3 + j] * x_3d[j];
-
-    for(int i = 0; i < 3; i ++) x_3d[i] = x_tmp_3d[i];
-    for(int i = 0; i < 3; i ++) x_3d[i] += t[i];
-
-    // calculate the flow
-    real x2 = x_3d[2] == 0. ? 0. : ((x_3d[0] / x_3d[2] * f[0]) + u[0]);
-    real y2 = x_3d[2] == 0. ? 0. : ((x_3d[1] / x_3d[2] * f[1]) + u[1]);
-
-    flow[batch_id * 2 * image_size + int(y) * width + int(x)] = 
-                                      x_3d[2] == 0 ? 0. : x2 - x;
-    flow[(batch_id * 2 + 1) * image_size + int(y) * width + int(x)] = 
-                                      x_3d[2] == 0 ? 0 : y2 - y;
-  }
-}
-
-
 __device__ void MatMultiply(real* A, size_t row_A, size_t col_A,
                             real* B, size_t row_B, size_t col_B,
                             real* C) {
@@ -196,6 +148,66 @@ __device__ void MatMultiply(real* A, size_t row_A, size_t col_A,
 
 
 // trans: [fx, fy, ux, uy, a1, a2, a3, t1, t2, t3]
+__global__ void Depth2FlowForward(real* depth,
+                                real* trans, 
+                                real* flow,
+                                const int batch_size,
+                                const int height,
+                                const int width) {
+
+  int nthreads = height * width * batch_size;
+  CUDA_KERNEL_LOOP(index, nthreads) {
+
+    // transfer depth to 3d 
+    // default is set and transfer to normalized flow
+    int x_i = index % width;
+    int y_i = (index / width) % height;
+    real x = (real(x_i) + 0.5f) / real(width);
+    real y = (real(y_i) + 0.5f) / real(height);
+
+    int batch_id = index / (height * width);
+    int image_size = height * width;
+
+    real* cur_trans = trans + 10 * batch_id;
+
+    real* f = cur_trans;
+    real* u = cur_trans + 2;
+    real* r = cur_trans + 4;
+    real* t = cur_trans + 7;
+
+    real x_3d[3] = {0.0f, 0.0f, 0.0f};
+    x_3d[0] = (x - u[0]) / f[0] * depth[index];
+    x_3d[1] = (y - u[1]) / f[1] * depth[index];
+    x_3d[2] = depth[index];
+
+    real R[9];
+    Angle2Matrix(r, R);
+
+    // project 3d to the second image
+    real x_tmp_3d[3] = {0.f, 0.f, 0.f};
+    MatMultiply(R, 3, 3, x_3d, 3, 1, x_tmp_3d);
+    // for(int i = 0; i < 3; i ++)
+    //   for(int j = 0; j < 3; j ++)
+    //     x_tmp_3d[i] += R[i*3 + j] * x_3d[j];
+
+    for(int i = 0; i < 3; i ++) x_3d[i] = x_tmp_3d[i];
+    for(int i = 0; i < 3; i ++) x_3d[i] += t[i];
+
+    // calculate the flow
+    real x2 = x_3d[2] == 0.f ? x : ((x_3d[0] / x_3d[2] * f[0]) + u[0]);
+    real y2 = x_3d[2] == 0.f ? y : ((x_3d[1] / x_3d[2] * f[1]) + u[1]);
+
+    real norm = sqrtf((x2 - x) * (x2 - x) + (y2 - y) * (y2 - y));
+    flow[batch_id * 2 * image_size + y_i * width + x_i] = 
+                  norm > 1.0f ? 0. : x2 - x;
+    flow[(batch_id * 2 + 1) * image_size + y_i * width + x_i] = 
+                  norm > 1.0f ? 0. : y2 - y;
+  }
+}
+
+
+
+// trans: [fx, fy, ux, uy, a1, a2, a3, t1, t2, t3]
 __global__ void Flow2DepthForward(real* flow,
                               real* trans, 
                               real* depth,
@@ -205,16 +217,18 @@ __global__ void Flow2DepthForward(real* flow,
     // project 3d to the second image
   int nthreads = height * width * batch_size;
   CUDA_KERNEL_LOOP(index, nthreads) {
-    real x = real(index % width),
-         y = real((index / width) % height);
+    int x_i = index % width;
+    int y_i = (index / width) % height;
+    real x = (real(x_i) + 0.5f) / real(width);
+    real y = (real(y_i) + 0.5f) / real(height);
 
     int batch_id = index / (height * width);
     int image_size = height * width;
 
     real x2 = x + 
-      flow[batch_id * 2 * image_size + int(y) * width + int(x)];
+      flow[batch_id * 2 * image_size + y_i * width + x_i];
     real y2 = y + 
-      flow[(batch_id * 2 + 1) * image_size + int(y) * width + int(x)];
+      flow[(batch_id * 2 + 1) * image_size + y_i * width + x_i];
 
     real* cur_trans = trans + 10 * batch_id;
     real* f = cur_trans;
@@ -233,23 +247,37 @@ __global__ void Flow2DepthForward(real* flow,
     real R[9];
     Angle2Matrix(r, R);
 
+    /* the function is from d1 * R * x_3d + t = x2_3d
+                      and x_2d = d1 * K{-1} * x_3d 
+                      and x_2d + flow_2d = x2_3d[2] * K{-1} * x2_3d
+    solve d1 should use svd, but we sample each pair and get the mean
+    results for approximation */
+
     real res[3];
     MatMultiply(R, 3, 3, x_3d, 3, 1, res);
-
     real depth_cur = 0.0f;
     real counter = 0.0f;
+
     real div = res[2] * x2_3d[1] - res[1];
     if( div != 0) {
       depth_cur += (t[1] - x2_3d[1] * t[2]) / div;
       counter += 1.0f;
     }
+
     div = res[2] * x2_3d[0] - res[0];
     if(div != 0) {
       depth_cur += (t[0] - x2_3d[0] * t[2]) / div;
       counter += 1.0f;
     }
-    depth[index] = depth_cur / max(counter, real(1e-6));
-    
+
+    div = x2_3d[1] * res[0] - x2_3d[0] * res[1] ;
+    if(div != 0) {
+      depth_cur += (x2_3d[0] * t[1] - x2_3d[1] * t[0]) / div;
+      counter += 1.0f;
+    }
+
+    depth_cur = depth_cur / max(counter, real(1e-7));
+    depth[index] = depth_cur <= 0. ? 0.0f : depth_cur;
   }
 }
 
@@ -267,6 +295,7 @@ void hl_trans_depth_flow_forward(real *input,
 
   const int threads = 1024;
   const int blocks = DIVUP(height * width * batch_size, threads);
+  
   if(depth_to_flow) {
     Depth2FlowForward<<<blocks, threads, 0, STREAM_DEFAULT>>>(
           input, trans, output, batch_size, height, width);

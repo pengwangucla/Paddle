@@ -922,10 +922,12 @@ class Transpose(Cfg):
         self.add_keys(locals())
 
 
+
 @config_class
 class Slice(Cfg):
     def __init__(self, channels, begin, size, axis):
         self.add_keys(locals())
+
 
 @config_class
 class Norm(Cfg):
@@ -1968,27 +1970,39 @@ class PadLayer(LayerBase):
 @config_layer('warp2d')
 class Warp2DLayer(LayerBase):
     def __init__(self, name, inputs, **xargs):
-        super(Warp2DLayer, self).__init__(name, 'warp2d', 0, inputs=inputs, **xargs)
+        super(Warp2DLayer, self).__init__(name, 'warp2d', 0,
+            inputs=inputs, **xargs)
         config_assert(len(self.inputs) == 2,
             'Warp2D must have two and only two input')
-        input = self.get_input_layer(0)
-        self.set_layer_height_width(g_layer_map[input.name].height,
-                                    g_layer_map[input.name].width)
-        self.set_layer_size(input.size)
+        input_layer = self.get_input_layer(0)
+        self.set_layer_height_width(g_layer_map[input_layer.name].height,
+                                    g_layer_map[input_layer.name].width)
+        self.set_layer_size(input_layer.size)
 
 
 @config_layer('trans_depth_flow')
 class TransDepthFlowLayer(LayerBase):
-    def __init__(self, name, inputs, **xargs):
-        super(TransDepthFLowLayer, self).__init__(
+    def __init__(self, name, inputs, depth2flow, **xargs):
+        super(TransDepthFlowLayer, self).__init__(
             name, 'trans_depth_flow', 0, inputs=inputs, **xargs)
-        config_assert(
-            len(self.inputs) == 2,
+
+        config_assert(len(self.inputs) == 2,
             'TransDepthFlowLayer must have two and only two input')
-        input = self.get_input_layer(0)
-        self.set_layer_height_width(g_layer_map[input.name].height,
-                                    g_layer_map[input.name].width)
-        self.set_layer_size(self.get_input_layer(0).size)
+
+        input_layer = self.get_input_layer(0)
+        input_layer_1 = self.get_input_layer(1)
+
+        print("size: {}, height:{}, width:{}".format(
+            input_layer_1.size, input_layer_1.height, 
+            input_layer_1.width))
+
+        self.config.inputs[0].trans_depth_flow_conf.depth_to_flow = \
+            depth2flow
+        self.set_layer_height_width(input_layer.height,
+                                    input_layer.width)
+
+        layer_size = input_layer.size * 2 if depth2flow else input_layer.size / 2
+        self.set_layer_size(layer_size)
 
 
 @config_layer('transpose')
@@ -2007,12 +2021,12 @@ class TransposeLayer(LayerBase):
         self.config.inputs[0].transpose_conf.trans_order_w = \
             transpose.trans_order_w
 
-        input_layer = self.get_input_layer(0)
-        shape_in = [transpose.channels, input_layer.height, input_layer.width]
+        input = self.get_input_layer(0)
+        shape_in = [transpose.channels, input.height, input.width]
 
         self.set_layer_height_width(shape_in[transpose.trans_order_h],
                                     shape_in[transpose.trans_order_w])
-        self.set_layer_size(input_layer.size)
+        self.set_layer_size(input.size)
 
 
 @config_layer('slice')

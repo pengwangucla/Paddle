@@ -63,7 +63,10 @@ public:
   BaseClass* createByType(const std::string& type, CreateArgs... args) {
     ClassCreator creator;
     CHECK(mapGet(type, creatorMap_, &creator)) << "Unknown class type: "
-                                               << type;
+                                               << type
+                                               << "Maybe you miss paddle init"
+                                               << " or did not register the class"
+                                               << " or use the wrong swig.so";
     return creator(args...);
   }
 

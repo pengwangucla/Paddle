@@ -17,6 +17,7 @@ def create(layers):
     :return:
     """
     topology = Topology(layers)
+    
     pool = Parameters()
     for param in topology.proto().parameters:
         pool.__append_config__(param)
@@ -179,8 +180,8 @@ class Parameters(object):
         value = value.astype(dtype=np.float32)
         shape = self.get_shape(key)
         if value.shape != shape:
-            raise ValueError("Value shape mismatch, expect %s, should %s" %
-                             (shape, value.shape))
+            raise ValueError("Parameter %s, Value shape mismatch, expect %s, given %s" %
+                             (key, shape, value.shape))
 
         if len(self.__gradient_machines__) == 0:
             self.__tmp_params__.append((key, value))

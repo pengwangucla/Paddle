@@ -6,18 +6,20 @@ import minibatch
 from data_feeder import DataFeeder
 
 __all__ = ['infer']
-
-
 class Inference(object):
     def __init__(self, output_layer, parameters):
         topo = topology.Topology(output_layer)
+        # print topo.proto()
+
         gm = api.GradientMachine.createFromConfigProto(
             topo.proto(), api.CREATE_MODE_TESTING, [api.PARAMETER_VALUE])
+        # print 'here'
         for param in gm.getParameters():
             val = param.getBuf(api.PARAMETER_VALUE)
             name = param.getName()
             assert isinstance(val, api.Vector)
             val.copyFromNumpyArray(parameters.get(name).flatten())
+        # print 'here 2'
         self.__gradient_machine__ = gm
         self.__data_types__ = topo.data_type()
 

@@ -36,6 +36,7 @@ void Warp2DLayer::forward(PassType passType) {
 
   MatrixPtr input = getInputValue(0);
   MatrixPtr flow = getInputValue(1);
+  
   batchSize_ = input->getHeight();
   size_ = input->getWidth();
   channel_ = size_ / height_ / width_;
@@ -56,7 +57,7 @@ void Warp2DLayer::forward(PassType passType) {
     }
   }
   else {
-    CHECK_EQ(1, 0)<<"Not implemented";
+    CHECK_EQ(1, 0)<<"Cpu is not implemented";
   }
 }
 

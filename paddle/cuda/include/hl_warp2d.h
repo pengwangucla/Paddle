@@ -47,11 +47,11 @@ extern void hl_warp2d_forward(real *input,
  *
  */
 extern void hl_trans_depth_flow_forward(real *input,
-                              real *trans, 
-                              real *output,
-                              const int batch_size,
-                              const int height,
-                              const int width,
-                              const bool depth_to_flow=true);
+                                        real *trans, 
+                                        real *output,
+                                        const int batch_size,
+                                        const int height,
+                                        const int width,
+                                        const bool depth_to_flow=true);
 
 #endif  // HL_WARP2D_H_

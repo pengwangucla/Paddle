@@ -17,7 +17,7 @@ limitations under the License. */
 #include <vector>
 #include "ModelConfig.pb.h"
 #include "paddle/gserver/layers/DataLayer.h"
-#include "paddle/gserver/layers/Warp2DLayer.h"
+#include "paddle/gserver/layers/TransDepthFlowLayer.h"
 #include "paddle/math/MathUtils.h"
 #include "paddle/trainer/Trainer.h"
 #include "paddle/utils/GlobalConstants.h"
@@ -81,7 +81,7 @@ void doDepth2FlowTest(const MatrixPtr& input,
 }
 
 
-TEST(Layer, Warp2DLayer) {
+TEST(Layer, TransDepthFlowLayer) {
   bool useGpu = true;
   FLAGS_use_gpu = useGpu;
 
@@ -92,31 +92,51 @@ TEST(Layer, Warp2DLayer) {
   MatrixPtr depth, flow, trans;
   depth = Matrix::create(1, size_t(INPUT_SIZE), false, false);
   real depthData[] = {1, 2, 2, 2,
-                       1, 2, 4, 4,
-                       4, 2, 2, 4,
-                       4, 4, 2, 2};
+                      1, 2, 4, 4,
+                      4, 2, 2, 4,
+                      4, 4, 2, 2};
   // this should be the inverse of translation of camera
   depth->setData(depthData);
 
   // the first relative to the second camera
   trans = Matrix::create(1, size_t(10), false, false);
-  real transData[] = {1, 1, 2, 2, 0, 0, 0, 1, 1, 0};
+  real transData[] = {1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0};
   trans->setData(transData);
 
   flow = Matrix::create(1, size_t(2 * INPUT_SIZE), false, false);
-  real flowData[] = { 1.  ,  0.5 ,  0.5 ,  0.5,
-        1.  ,  0.5 ,  0.25,  0.25,
-        0.25,  0.5 ,  0.5 ,  0.25,
-        0.25,  0.25,  0.5 ,  0.5 ,
-        1.  ,  0.5 ,  0.5 ,  0.5 ,
-        1.  ,  0.5 ,  0.25,  0.25,
-        0.25,  0.5 ,  0.5 ,  0.25,
-        0.25,  0.25,  0.5 ,  0.5};
+
+  real flowData[] = { 0.,  0., 0., 0.,
+    0.75530678, 0.80693245, 0., 0.,
+    0.61554825, 0.60629523, 0.64588666 ,0.7508657,
+    0.51134431, 0.46075571, 0.44459033 ,0.47260404,
+    0., 0.,0.,0.,
+   -0.64293694,-0.53776467,0.,0.,
+   -0.58086169,-0.46368638,-0.32273769,-0.14996389,
+   -0.59817839,-0.47860429,-0.33838868,-0.17168188};
+
   flow->setData(flowData);
 
   doDepth2FlowTest(depth, trans,
    flow, size_t(HEIGHT), size_t(WIDTH), useGpu, true);
   LOG(INFO)<<"TEST depth to flow finished";
+
+  real flowData2[] = { 0.25,  0.25, 0.25, 0.25,
+    0.5, 0.5, 0.5, 0.5,
+    0.25, 0.25, 0.25, 0.25,
+    0.5, 0.5, 0.5, 0.5,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0};
+  real transData2[] = {1, 1, 0.5, 0.5, 0.5, 0., 0., 0.5, 0, 0};
+  real depthData2[] = { 0.3809002,0.34130815 ,0.29112014 ,0.23142901,
+    0.49729586, 0.49464464 ,0.48924172 ,0.48096746,
+    0.35416138, 0.36612427 ,0.37472826 ,0.38003173,
+    0.38663301, 0.38942868 ,0.38789877 ,0.383008};
+
+  flow->setData(flowData2);
+  trans->setData(transData2);
+  depth->setData(depthData2);
 
   doDepth2FlowTest(flow, trans,
    depth, size_t(HEIGHT), size_t(WIDTH), useGpu, false);

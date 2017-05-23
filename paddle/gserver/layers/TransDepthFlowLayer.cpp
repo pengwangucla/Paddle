@@ -39,7 +39,7 @@ void TransDepthFlowLayer::forward(PassType passType) {
   MatrixPtr input = getInputValue(0);
   MatrixPtr trans = getInputValue(1);
 
-  CHECK_EQ(trans->getWidth(), 10);
+  CHECK_EQ(trans->getWidth(), 10)<<"trans must be a 10 dim vector";
   
   batchSize_ = input->getHeight();
   size_ = input->getWidth();
@@ -56,8 +56,9 @@ void TransDepthFlowLayer::forward(PassType passType) {
     CHECK_EQ(channel_, 2);
     resizeOutput(batchSize_, size_ / 2);
   }
-
   MatrixPtr output = getOutputValue();
+
+  // input->print(std::cout);
 
   if(useGpu_) {
     hl_trans_depth_flow_forward(input->getData(),
@@ -67,9 +68,11 @@ void TransDepthFlowLayer::forward(PassType passType) {
                       height_,
                       width_,
                       depth_to_flow);
+    // LOG(INFO)<<"result";
+    // output->print(std::cout);
   }
   else {
-    CHECK_EQ(1, 0)<<"Not implemented";
+    CHECK_EQ(1, 0)<<"CPU version is not implemented";
   }
 }
 

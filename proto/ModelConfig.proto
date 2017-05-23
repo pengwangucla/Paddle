@@ -283,7 +283,7 @@ message SliceConfig {
 }
 
 message TransDepthFlowConfig {
-  optional bool depth_to_flow = 1 [default = true];
+  required bool depth_to_flow = 1;
 }
 
 message LayerInputConfig {
