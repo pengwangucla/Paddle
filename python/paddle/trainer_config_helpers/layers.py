@@ -41,7 +41,9 @@ __all__ = [
     'batch_norm_layer', 'img_cmrnorm_layer', 'addto_layer', 'concat_layer',
     'seq_concat_layer', 'lstm_step_layer', 'recurrent_group', 'memory',
     'StaticInput', 'expand_layer', 'scaling_layer', 'scaling_projection',
-    'power_layer', 'interpolation_layer', 'bilinear_interp_layer',
+    'power_layer', 'interpolation_layer', 
+    'bilinear_interp_layer',
+    'nearest_interp_layer',
     'trans_layer', 'rotate_layer', 'sum_to_one_norm_layer', 'get_output_layer',
     'LayerType', 'context_projection', 'beam_search', 'maxid_layer',
     'GeneratedInput', 'SubsequenceInput', 'gru_step_layer', 'recurrent_layer',
@@ -99,6 +101,7 @@ class LayerType(object):
     EXPAND_LAYER = 'expand'
     INTERPOLATION_LAYER = 'interpolation'
     BILINEAR_INTERP_LAYER = 'bilinear_interp'
+    NEAREST_INTERP_LAYER = 'nearest_interp'
     POWER_LAYER = 'power'
     ROTATE_LAYER = 'rotate'
     RESIZE_LAYER = 'resize'
@@ -1665,6 +1668,57 @@ def bilinear_interp_layer(input,
     return LayerOutput(
         name,
         LayerType.BILINEAR_INTERP_LAYER,
+        parents=[input],
+        num_filters=num_channels,
+        size=l.config.size)
+
+
+@wrap_name_default()
+@layer_support()
+def nearest_interp_layer(input,
+                       out_size_x=None,
+                       out_size_y=None,
+                       name=None,
+                       layer_attr=None):
+    """
+    This layer is to implement nearest interpolation on conv layer output.
+
+    The simple usage is:
+
+    .. code-block:: python
+
+       nearest = nearest_interp_layer(input=layer1, out_size_x=64, out_size_y=64)
+
+    :param   input:        A input layer.
+    :type    input:        LayerOutput.
+    :param   out_size_x:   bilinear interpolation output width.
+    :type    out_size_x:   int|None
+    :param   out_size_y:   bilinear interpolation output height.
+    :type    out_size_y:   int|None
+    :param   name:         The layer's name, which cna not be specified.
+    :type    name:         None|basestring
+    :param   layer_attr:   Extra Layer attribute.
+    :type    layer_attr:   ExtraLayerAttribute
+    :return: LayerOutput object.
+    :rtype:  LayerOutput
+    """
+    assert out_size_x > 0 and out_size_y > 0
+    assert input.num_filters is not None
+
+    num_channels = input.num_filters
+    l = Layer(
+        name=name,
+        inputs=Input(
+            input.name,
+            nearest_interp=NearestInterp(
+                out_size_x=out_size_x,
+                out_size_y=out_size_y,
+                channels=num_channels)),
+        type=LayerType.NEAREST_INTERP_LAYER,
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+    return LayerOutput(
+        name,
+        LayerType.NEAREST_INTERP_LAYER,
         parents=[input],
         num_filters=num_channels,
         size=l.config.size)
@@ -4018,7 +4072,8 @@ def classification_cost(input,
         assert isinstance(e.for_classification, bool)
         assert e.for_classification
 
-        e(name=e.__name__, input=input, label=label, weight=weight, top_k=top_k)
+        e(name=e.__name__, input=input, label=label, weight=weight,
+          top_k=top_k)
 
     if not isinstance(evaluator, collections.Sequence):
         evaluator = [evaluator]

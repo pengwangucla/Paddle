@@ -1466,6 +1466,44 @@ void GpuMatrix::bilinearBackward(const Matrix& out,
   }
 }
 
+void GpuMatrix::nearestForward(const Matrix& in,
+                                const size_t inImgH,
+                                const size_t inImgW,
+                                const size_t outImgH,
+                                const size_t outImgW,
+                                const size_t numChannels,
+                                const real ratioH,
+                                const real ratioW) {
+  CHECK(dynamic_cast<const GpuMatrix*>(&in));
+
+  const size_t outputW = getWidth();
+  const size_t outputH = getHeight();
+  const size_t inputW = in.getWidth();
+  const size_t inputH = in.getHeight();
+
+  real* outData = getData();
+  const real* inData = in.getData();
+
+  if (inImgH == outImgW && inImgW == outImgW) {
+    this->copyFrom(in);
+  } else {
+    hl_nearest_forward(inData,
+                       inImgH,
+                       inImgW,
+                       inputH,
+                       inputW,
+                       outData,
+                       outImgH,
+                       outImgW,
+                       outputH,
+                       outputW,
+                       numChannels,
+                       ratioH,
+                       ratioW);
+  }
+}
+
+
 void GpuMatrix::multiBinaryLabelCrossEntropy(Matrix& output, Matrix& label) {
   GpuMatrix* outputPtr = dynamic_cast<GpuMatrix*>(&output);
   auto labelPtr = dynamic_cast<GpuSparseMatrix*>(&label);

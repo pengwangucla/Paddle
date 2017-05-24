@@ -1,4 +1,12 @@
 # gserver pacakge unittests
+################# test_NearestInterpLayer #######################
+add_unittest_without_exec(test_NearestInterp
+    test_NearestInterp.cpp
+    LayerGradUtil.cpp)
+
+add_test(NAME test_NearestInterp
+    COMMAND test_NearestInterp)
+
 ################# test_TransposeLayer #######################
 add_unittest_without_exec(test_Transpose
     test_Transpose.cpp

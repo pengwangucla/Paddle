@@ -246,6 +246,14 @@ message BilinearInterpConfig {
   required uint32 out_size_y = 3;
 }
 
+message NearestInterpConfig {
+  // The size of input feature map.
+  required ImageConfig image_conf = 1;
+  // The size of output feature map.
+  required uint32 out_size_x = 2;
+  required uint32 out_size_y = 3;
+}
+
 message ImageConfig {
   // The image data dimensionality.
   // This value must be either 1, 2, 3, or a multiple of 4.
@@ -306,6 +314,7 @@ message LayerInputConfig {
   optional TransposeConfig transpose_conf = 15;
   optional TransDepthFlowConfig trans_depth_flow_conf = 16;
   optional SliceConfig slice_conf = 17;
+  optional NearestInterpConfig nearest_interp_conf = 18;
 }
 
 message LayerConfig {

@@ -513,6 +513,62 @@ void hl_bilinear_backward(real* inGrad,
   CHECK_SYNC("hl_bilinear_backward failed");
 }
 
+__global__ void KeNearestInterpFw(const real* in,
+                                   const size_t inImgH,
+                                   const size_t inImgW,
+                                   const size_t inputH,
+                                   const size_t inputW,
+                                   real* out,
+                                   const size_t outImgH,
+                                   const size_t outImgW,
+                                   const size_t outputH,
+                                   const size_t outputW,
+                                   const size_t numChannels,
+                                   const real ratioH,
+                                   const real ratioW) {
+  int nthreads = outputH * outputW;                      
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid < nthreads) {
+    int outIdH = tid / outputW;
+    int outIdW = tid % outputW;
+    int outImgSize = outputW / numChannels;
+
+    int channelId = outIdW / outImgSize;
+    int outImgIdy = (outIdW % outImgSize) / outImgW;
+    int outImgIdx = tid % outImgW;
+
+    int inImgSize = inputW / numChannels;
+
+    int inImgIdy = ratioH * outImgIdy;
+    int inImgIdx = ratioW * outImgIdx;
+
+    out[tid] = in[outIdH * inputW + channelId * inImgSize + 
+      inImgIdy * inImgW + inImgIdx];
+  }
+}
+
+void hl_nearest_forward(const real* inData,
+                         const size_t inImgH,
+                         const size_t inImgW,
+                         const size_t inputH,
+                         const size_t inputW,
+                         real* outData,
+                         const size_t outImgH,
+                         const size_t outImgW,
+                         const size_t outputH,
+                         const size_t outputW,
+                         const size_t numChannels,
+                         const real ratioH,
+                         const real ratioW) {
+  int threadNum = outputH * outputW;
+  int blocks = (threadNum + 1024 - 1) / 1024;
+
+  KeNearestInterpFw<<< blocks, 1024, 0, STREAM_DEFAULT>>>(
+    inData, inImgH, inImgW, inputH, inputW, outData, outImgH,
+    outImgW, outputH, outputW, numChannels, ratioH, ratioW);
+  CHECK_SYNC("hl_nearest_forward failed");
+}
+
 __global__ void maxoutFpCompute(size_t nthreads, const real * inData,
                                 real * outData, int* idData, 
                                 size_t size, size_t featLen, size_t groups) {

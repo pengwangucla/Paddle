@@ -1102,6 +1102,17 @@ public:
     LOG(FATAL) << "Not implemented";
   }
 
+  virtual void nearestForward(const Matrix& in,
+                               const size_t inImgH,
+                               const size_t inImgW,
+                               const size_t outImgH,
+                               const size_t outImgW,
+                               const size_t numChannels,
+                               const real ratioH,
+                               const real ratioW) {
+    LOG(FATAL) << "Not implemented";
+  }
+
   template <typename ExpressionType>
   void operator=(const ExpressionType& expr) {
     if (useGpu_) {
@@ -1446,6 +1457,15 @@ public:
                         const size_t numChannels,
                         const real ratioH,
                         const real ratioW);
+
+  void nearestForward(const Matrix& in,
+                       const size_t inImgH,
+                       const size_t inImgW,
+                       const size_t outImgH,
+                       const size_t outImgW,
+                       const size_t numChannels,
+                       const real ratioH,
+                       const real ratioW);
 
   void multiBinaryLabelCrossEntropy(Matrix& output, Matrix& label);
 

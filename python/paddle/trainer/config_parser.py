@@ -487,6 +487,7 @@ class Input(Cfg):
             gradient_clipping_threshold=None,
             conv=None,
             bilinear_interp=None,
+            nearest_interp=None,
             norm=None,
             pool=None,
             image=None,
@@ -887,6 +888,10 @@ class BilinearInterp(Cfg):
     def __init__(self, out_size_x=None, out_size_y=None, channels=None):
         self.add_keys(locals())
 
+@config_class
+class NearestInterp(Cfg):
+    def __init__(self, out_size_x=None, out_size_y=None, channels=None):
+        self.add_keys(locals())
 
 @config_class
 class Pool(Cfg):
@@ -1181,10 +1186,10 @@ def get_img_size(input_layer_name, channels):
     return img_size, img_size_y
 
 
-def parse_bilinear(bilinear, input_layer_name, bilinear_conf):
-    parse_image(bilinear, input_layer_name, bilinear_conf.image_conf)
-    bilinear_conf.out_size_x = bilinear.out_size_x
-    bilinear_conf.out_size_y = bilinear.out_size_y
+def parse_interp(interp_param, layer_name, conf):
+    parse_image(interp_param, layer_name, conf.image_conf)
+    conf.out_size_x = interp_param.out_size_x
+    conf.out_size_y = interp_param.out_size_y
 
 
 def parse_pool(pool, input_layer_name, pool_conf, ceil_mode):
@@ -2797,7 +2802,19 @@ class BilinearInterpLayer(LayerBase):
             name, 'bilinear_interp', 0, inputs=inputs, **xargs)
         input_layer = self.get_input_layer(0)
         conf = self.config.inputs[0].bilinear_interp_conf
-        parse_bilinear(self.inputs[0].bilinear_interp, input_layer.name, conf)
+        parse_interp(self.inputs[0].bilinear_interp, input_layer.name, conf)
+        self.set_cnn_layer(name, conf.out_size_y, conf.out_size_x,
+                           conf.image_conf.channels)
+
+
+@config_layer('nearest_interp')
+class NearestInterpLayer(LayerBase):
+    def __init__(self, name, inputs, **xargs):
+        super(NearestInterpLayer, self).__init__(
+            name, 'nearest_interp', 0, inputs=inputs, **xargs)
+        input_layer = self.get_input_layer(0)
+        conf = self.config.inputs[0].nearest_interp_conf
+        parse_interp(self.inputs[0].nearest_interp, input_layer.name, conf)
         self.set_cnn_layer(name, conf.out_size_y, conf.out_size_x,
                            conf.image_conf.channels)
 
