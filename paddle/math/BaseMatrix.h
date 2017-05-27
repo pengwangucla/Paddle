@@ -663,6 +663,9 @@ public:
    * b = a
    * @endcode
    */
+  void acos(BaseMatrixT& b);
+  void acosDerivative(BaseMatrixT& b);
+
   void exp2(BaseMatrixT& b);
   void expDerivative(BaseMatrixT& b);
 

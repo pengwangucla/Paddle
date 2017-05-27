@@ -86,6 +86,12 @@ public:
 };
 
 template <class T>
+class acos {
+public:
+  INLINE T operator()(const T a) const { return std::acos(a); }
+};
+
+template <class T>
 class square {
 public:
   INLINE T operator()(const T a) const { return a * a; }

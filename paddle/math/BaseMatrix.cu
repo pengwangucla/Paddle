@@ -463,6 +463,29 @@ void BaseMatrixT<T>::downClip(T p) {
  *
  */
 
+/**
+ * @brief   trangular operator.
+ *
+ */
+DEFINE_MATRIX_BINARY_OP(Acos,
+   a = b <= 1.0f && b >= -1.0f ? acos(b) : 0.0f);
+template<>
+void BaseMatrixT<real>::acos(BaseMatrixT& b) {
+    applyBinary(binary::Acos<real>(), b);
+}
+DEFINE_MATRIX_BINARY_OP(AcosDerivative,
+                        a *=  b <= 1.0f && b >= -1.0f ? 
+                        -1 / sqrt(1 - b * b) : 0.0f);
+template<>
+void BaseMatrixT<real>::acosDerivative(BaseMatrixT& b) {
+  applyBinary(binary::AcosDerivative<real>(), b);
+}
+
+/**
+ * @brief   math add operator.
+ *
+ */
+
 DEFINE_MATRIX_BINARY_OP(Add, a += b);
 template<class T>
 void BaseMatrixT<T>::add(BaseMatrixT& b) {
@@ -545,21 +568,19 @@ void BaseMatrixT<real>::pow2(BaseMatrixT& b, real p) {
   }
 }
 
-
 DEFINE_MATRIX_BINARY_PARAMETER_OP(PowDerivative, ONE_PARAMETER,
                         a *=  b != 0.0f ? p * pow(b, p - 1) : 0.0f);
 template<>
 void BaseMatrixT<real>::powDerivative(BaseMatrixT& b, real p) {
-  //CHECK(useGpu_) << "pow derivative do not support cpu";
   applyBinary(binary::PowDerivative<real>(p), b);
-}
-
+} 
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(Add2, TWO_PARAMETER, a = p1 * a + p2 * b);
 template<class T>
 void BaseMatrixT<T>::add(BaseMatrixT& b, T p1, T p2) {
   applyBinary(binary::Add2<T>(p1, p2), b);
 }
+
 
 template<class T>
 void BaseMatrixT<T>::addBias(BaseMatrixT& b, T scale) {

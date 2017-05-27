@@ -31,8 +31,11 @@ except ImportError:
 import copy
 
 __all__ = [
-    "full_matrix_projection", "AggregateLevel", "ExpandLevel",
-    "identity_projection", "dotmul_projection", "dotmul_operator",
+    "full_matrix_projection",
+    "AggregateLevel",
+    "ExpandLevel",
+    "identity_projection",
+    "dotmul_projection", "dotmul_operator",
     "repeat_layer", "seq_reshape_layer", "table_projection", "mixed_layer",
     "data_layer", "embedding_layer", "fc_layer", "grumemory", "pooling_layer",
     "lstmemory", "last_seq", "first_seq", "cos_sim", "hsigmoid",
@@ -44,7 +47,10 @@ __all__ = [
     'power_layer', 'interpolation_layer', 
     'bilinear_interp_layer',
     'nearest_interp_layer',
-    'trans_layer', 'rotate_layer', 'sum_to_one_norm_layer', 'get_output_layer',
+    'trans_layer', 
+    'rotate_layer', 
+    'sum_to_one_norm_layer', 
+    'get_output_layer',
     'LayerType', 'context_projection', 'beam_search', 'maxid_layer',
     'GeneratedInput', 'SubsequenceInput', 'gru_step_layer', 'recurrent_layer',
     'BaseGeneratedInput', 'conv_operator', 'conv_shift_layer', 'tensor_layer',
@@ -737,9 +743,12 @@ def mixed_layer(size=0,
     else:
         if not isinstance(input, collections.Sequence):
             input = [input]
-
-        size = input[0].origin.size
-        num_filters = input[0].origin.num_filters
+        if not isinstance(input[0].origin, collections.Sequence):
+            size = input[0].origin.size
+            num_filters = input[0].origin.num_filters
+        else:
+            size = input[0].origin[0].size
+            num_filters = input[0].origin[0].num_filters
 
         with mixed_layer(
                 name=name,
@@ -1855,7 +1864,8 @@ def trans_layer(input, name=None, layer_attr=None):
 
 @wrap_name_default()
 @layer_support()
-def resize_layer(input, size, name=None, layer_attr=None):
+def resize_layer(input, size, height=None, width=None,
+                 name=None, layer_attr=None):
     """
     A layer for reshape a minibatch matrix.
 
@@ -1879,6 +1889,8 @@ def resize_layer(input, size, name=None, layer_attr=None):
         name=name,
         type=LayerType.RESIZE_LAYER,
         size=size,
+        height=height,
+        width=width,
         inputs=[input.name],
         **ExtraAttr.to_kwargs(layer_attr))
     return LayerOutput(name,
@@ -5496,7 +5508,7 @@ def sum_cost(input, name=None, layer_attr=None):
         inputs=[input.name],
         **ExtraLayerAttribute.to_kwargs(layer_attr))
 
-    return LayerOutput(name, LayerType.SUM_COST, parents=[input], size=1)
+    return LayerOutput(name, LayerType.COST, parents=[input], size=1)
 
 
 @wrap_name_default()

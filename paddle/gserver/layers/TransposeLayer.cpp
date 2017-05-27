@@ -32,7 +32,7 @@ void TransposeLayer::transpose(real* input,
                                real* output,
                                const std::vector<int> transOrder,
                                const bool is_forward) {
-  // first using the existing matrix operation for Gpu speed
+  // first using the existing matrix operation to use GPU
   int heightNew = channel_, widthNew = height_ * width_;
   if (compareVector(transOrder, std::vector<int>{1, 2, 0})) {
     heightNew = is_forward ? channel_ : height_ * width_;
@@ -68,8 +68,10 @@ bool TransposeLayer::init(const LayerMap& layerMap,
   transOrder_.push_back(config_.inputs(0).transpose_conf().trans_order_h());
   transOrder_.push_back(config_.inputs(0).transpose_conf().trans_order_w());
 
-  height_ = config_.height();
-  width_ = config_.width();
+  auto& img_conf = config_.inputs(0).transpose_conf().image_conf();
+
+  height_ = img_conf.img_size_y();
+  width_ = img_conf.img_size();
 
   for (int i = 0; i < 3; i++) {
     if (transOrder_[i] != i) {
@@ -77,7 +79,6 @@ bool TransposeLayer::init(const LayerMap& layerMap,
       break;
     }
   }
-
   return true;
 }
 

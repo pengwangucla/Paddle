@@ -41,7 +41,6 @@ using real = float;
 #ifndef DIVUP
 #define DIVUP(x, y) (((x) + (y)-1) / (y))
 #endif
-
 /**
  * HPPL is an internal high performance parallel computing library
  * for high-level neural network routines, which can support many

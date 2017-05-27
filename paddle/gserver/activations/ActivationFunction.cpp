@@ -434,6 +434,31 @@ Error __must_check backward(Argument& act) {
 END_DEFINE_ACTIVATION(sqrt)
 
 /**
+ * @brief Acos Activation
+ * \f[
+ * f(z) = acos(z)
+ * \f]
+ */
+BEGIN_DEFINE_ACTIVATION(acos)
+Error __must_check forward(Argument& act) {
+  SetDevice device(act.deviceId);
+  Matrix::resizeOrCreate(act.in,
+                         act.value->getHeight(),
+                         act.value->getWidth(),
+                         /* trans */ false,
+                         useGpu(act.deviceId));
+
+  act.in->copyFrom(*act.value);
+  act.value->acos(*act.value);
+  return Error();
+}
+Error __must_check backward(Argument& act) {
+  act.grad->acosDerivative(*act.in);
+  return Error();
+}
+END_DEFINE_ACTIVATION(acos)
+
+/**
  * @brief Pow Activation
  * \f[
  * f(z) = z^{p}

@@ -17,6 +17,7 @@ def create(layers):
     :return:
     """
     topology = Topology(layers)
+    # print topology.proto()
     
     pool = Parameters()
     for param in topology.proto().parameters:

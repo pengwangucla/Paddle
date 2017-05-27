@@ -1445,13 +1445,13 @@ def outputs(layers, *args):
                        " inputs and outputs order. It might not work well."
                        "Please see follow log carefully.")
     inputs = []
-    outputs_ = []
+    # outputs_ = []
     for each_layer in layers:
         assert isinstance(each_layer, LayerOutput)
         inputs.extend(__dfs_travel__(each_layer))
-        outputs_.extend(
-            __dfs_travel__(each_layer,
-                           lambda x: x.layer_type == LayerType.COST))
+        # outputs_.extend(
+        #     __dfs_travel__(each_layer,
+        #                    lambda x: x.layer_type == LayerType.COST))
 
     # Currently, we got each leaf node's inputs order, output order.
     # We merge them together.
@@ -1464,15 +1464,15 @@ def outputs(layers, *args):
         if each_input.name not in final_inputs:
             final_inputs.append(each_input.name)
 
-    for each_output in outputs_:
-        assert isinstance(each_output, LayerOutput)
-        if each_output.name not in final_outputs:
-            final_outputs.append(each_output.name)
+    # for each_output in outputs_:
+    #     assert isinstance(each_output, LayerOutput)
+    #     if each_output.name not in final_outputs:
+    #         final_outputs.append(each_output.name)
 
     logger.info("".join(["The input order is [", ", ".join(final_inputs), "]"]))
 
-    if len(final_outputs) == 0:
-        final_outputs = map(lambda x: x.name, layers)
+    # if len(final_outputs) == 0:
+    final_outputs = map(lambda x: x.name, layers)
 
     logger.info("".join(
         ["The output order is [", ", ".join(final_outputs), "]"]))

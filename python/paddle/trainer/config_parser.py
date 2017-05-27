@@ -1980,9 +1980,9 @@ class Warp2DLayer(LayerBase):
         config_assert(len(self.inputs) == 2,
             'Warp2D must have two and only two input')
         input_layer = self.get_input_layer(0)
-        self.set_layer_height_width(g_layer_map[input_layer.name].height,
-                                    g_layer_map[input_layer.name].width)
-        self.set_layer_size(input_layer.size)
+        channels = input_layer.size / input_layer.height / input_layer.width
+        self.set_cnn_layer(name, input_layer.height,
+            input_layer.width, channels)
 
 
 @config_layer('trans_depth_flow')
@@ -2003,11 +2003,10 @@ class TransDepthFlowLayer(LayerBase):
 
         self.config.inputs[0].trans_depth_flow_conf.depth_to_flow = \
             depth2flow
-        self.set_layer_height_width(input_layer.height,
-                                    input_layer.width)
 
-        layer_size = input_layer.size * 2 if depth2flow else input_layer.size / 2
-        self.set_layer_size(layer_size)
+        out_channels = 2 if depth2flow else 1
+        self.set_cnn_layer(name,input_layer.height,
+            input_layer.width, out_channels)
 
 
 @config_layer('transpose')
@@ -2018,7 +2017,13 @@ class TransposeLayer(LayerBase):
         config_assert(
             len(self.inputs) == 1,
             'TransposeLayer must have one and only one input')
+
+        input = self.get_input_layer(0)
+
         transpose = self.inputs[0].transpose
+        image_conf = self.config.inputs[0].transpose_conf.image_conf
+        parse_image(transpose, input.name, image_conf)
+
         self.config.inputs[0].transpose_conf.trans_order_c = \
             transpose.trans_order_c
         self.config.inputs[0].transpose_conf.trans_order_h = \
@@ -2026,12 +2031,12 @@ class TransposeLayer(LayerBase):
         self.config.inputs[0].transpose_conf.trans_order_w = \
             transpose.trans_order_w
 
-        input = self.get_input_layer(0)
-        shape_in = [transpose.channels, input.height, input.width]
 
-        self.set_layer_height_width(shape_in[transpose.trans_order_h],
-                                    shape_in[transpose.trans_order_w])
-        self.set_layer_size(input.size)
+        shape_in = [transpose.channels, input.height, input.width]
+        self.set_cnn_layer(name,
+            shape_in[transpose.trans_order_h],
+            shape_in[transpose.trans_order_w],
+            shape_in[transpose.trans_order_c])
 
 
 @config_layer('slice')
@@ -2164,13 +2169,17 @@ class TransLayer(LayerBase):
 
 @config_layer('resize')
 class ResizeLayer(LayerBase):
-    def __init__(self, name, size, inputs, **xargs):
+    def __init__(self, name, size, height, width, inputs, **xargs):
         super(ResizeLayer, self).__init__(
             name, 'resize', size=size, inputs=inputs, **xargs)
         config_assert(
             len(self.inputs) == 1,
             'ResizeLayer must have one and only one input')
-
+        if height and width:
+            # in usual case, if we resize back the image, we have
+            # channel at last indice, which was width in define
+            channel = size / height / width
+            self.set_cnn_layer(name, height, width, channel)
 
 @config_layer('rotate')
 class RotateLayer(LayerBase):
@@ -2180,8 +2189,8 @@ class RotateLayer(LayerBase):
         config_assert(
             len(self.inputs) == 1,
             'RotateLayer must have one and only one input')
-        self.set_layer_height_width(height, width)
-        self.set_layer_size(self.get_input_layer(0).size)
+        channel = self.get_input_layer(0).size / height / width
+        self.set_cnn_layer(name, height, width, channel)
 
 
 @config_layer('blockexpand')
@@ -2744,7 +2753,9 @@ class ScalingLayer(LayerBase):
         if input_layer1.HasField('height') and input_layer1.HasField('width'):
             config_assert(
                 input_layer1.size % input_layer1.height * input_layer1.width == 0,
-                'input layer size must equal to height * width')
+                'input layer size {} must equal to height {} * width {}'.format(
+                    input_layer1.size, input_layer1.height, input_layer1.width))
+
             channel = input_layer1.size / input_layer1.height / input_layer1.width
             self.set_cnn_layer(name, input_layer1.height, input_layer1.width,
                                channel)

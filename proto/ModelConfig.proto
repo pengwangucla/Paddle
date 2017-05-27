@@ -279,6 +279,7 @@ message PadConfig {
 }
 
 message TransposeConfig {
+  required ImageConfig image_conf = 1;
   required uint32 trans_order_c = 2;
   required uint32 trans_order_h = 3;
   required uint32 trans_order_w = 4;

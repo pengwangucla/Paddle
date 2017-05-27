@@ -138,6 +138,7 @@ class SGD(object):
         evaluator.start()
         total_cost = 0
         num_samples = 0.0
+        
         for data_batch in reader():
             num_samples += len(data_batch)
             self.__gradient_machine__.forward(
@@ -146,6 +147,9 @@ class SGD(object):
             self.__gradient_machine__.eval(evaluator)
 
         evaluator.finish()
+
+        print "test"
+        print("Evaluated examples {}\n".format(num_samples))
         return v2_event.TestResult(
             evaluator=evaluator, cost=total_cost / num_samples)
 

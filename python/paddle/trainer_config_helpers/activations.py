@@ -30,7 +30,8 @@ __all__ = [
     "SquareActivation", 
     "BaseActivation",
     "LogActivation",
-    "InvActivation"
+    "InvActivation",
+    "AcosActivation"
 ]
 
 
@@ -149,6 +150,17 @@ class InvActivation(BaseActivation):
     def __init__(self):
         BaseActivation.__init__(self, 'pow', False)
 
+
+class AcosActivation(BaseActivation):
+    """
+    Sqrt Activation.
+
+    .. math::
+       f(z) = acos(z).
+    """
+
+    def __init__(self):
+        BaseActivation.__init__(self, 'acos', False)
 
 
 class ReluActivation(BaseActivation):

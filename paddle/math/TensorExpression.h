@@ -86,6 +86,10 @@ public:
     return unaryExpression(hppl::unary::sqrt_op<T>());
   }
 
+  const TensorUnaryOp<hppl::unary::acos<T>, const Derived, T> acos() const {
+    return unaryExpression(hppl::unary::acos<T>());
+  }
+
   const TensorUnaryOp<hppl::unary::square<T>, const Derived, T> square() const {
     return unaryExpression(hppl::unary::square<T>());
   }
