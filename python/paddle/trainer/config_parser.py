@@ -2011,7 +2011,7 @@ class TransDepthFlowLayer(LayerBase):
 
 @config_layer('transpose')
 class TransposeLayer(LayerBase):
-    def __init__(self, name, inputs, **xargs):
+    def __init__(self, name, height, width, inputs, **xargs):
         super(TransposeLayer, self).__init__(
             name, 'transpose', 0, inputs=inputs, **xargs)
         config_assert(
@@ -2022,7 +2022,13 @@ class TransposeLayer(LayerBase):
 
         transpose = self.inputs[0].transpose
         image_conf = self.config.inputs[0].transpose_conf.image_conf
-        parse_image(transpose, input.name, image_conf)
+        if height and width:
+            # manually set the input size if lost
+            image_conf.channels = transpose.channels
+            image_conf.img_size = width
+            image_conf.img_size_y = height
+        else:
+            parse_image(transpose, input.name, image_conf)
 
         self.config.inputs[0].transpose_conf.trans_order_c = \
             transpose.trans_order_c
@@ -2031,8 +2037,8 @@ class TransposeLayer(LayerBase):
         self.config.inputs[0].transpose_conf.trans_order_w = \
             transpose.trans_order_w
 
-
         shape_in = [transpose.channels, input.height, input.width]
+        self.config.num_filters = shape_in[transpose.trans_order_c]
         self.set_cnn_layer(name,
             shape_in[transpose.trans_order_h],
             shape_in[transpose.trans_order_w],
@@ -2233,6 +2239,7 @@ def define_cost(class_name, cost_type):
     def init(cls, name, inputs, device=None, coeff=1.):
         super(type(cls), cls).__init__(
             name, cost_type, 1, inputs, device=device, coeff=coeff)
+        cls.set_layer_height_width(1, 1)
 
     cls = type(class_name, (LayerBase, ), dict(__init__=init))
     global g_cost_map

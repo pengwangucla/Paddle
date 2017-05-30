@@ -269,7 +269,7 @@ message PriorBoxConfig {
   repeated uint32 max_size = 2;
   repeated float aspect_ratio = 3;
   repeated float variance = 4;
-}
+}ye
 
 message PadConfig {
   required ImageConfig image_conf = 1;

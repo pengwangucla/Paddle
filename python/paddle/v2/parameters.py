@@ -6,6 +6,15 @@ import tarfile
 import cStringIO
 from topology import Topology
 
+
+# import logging
+# logging.basicConfig(
+#     format='[%(levelname)s %(asctime)s %(filename)s:%(lineno)s] %(message)s', )
+# logger = logging.getLogger('paddle')
+# logger.setLevel(logging.INFO)
+# __real_print__ = print
+# print = logger.info
+
 __all__ = ['Parameters', 'create']
 
 
@@ -17,7 +26,6 @@ def create(layers):
     :return:
     """
     topology = Topology(layers)
-    # print topology.proto()
     
     pool = Parameters()
     for param in topology.proto().parameters:
@@ -77,6 +85,16 @@ class Parameters(object):
         :rtype: list
         """
         return self.__param_conf__.keys()
+
+    # def print(self):
+    #     """
+    #     print all the keys()
+
+    #     :return: list of parameter name
+    #     :rtype: list
+    #     """
+    #     for param_name in self.keys():
+    #         print(param_name)
 
     def names(self):
         """

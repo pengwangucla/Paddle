@@ -548,8 +548,9 @@ def dotmul_operator(a=None, b=None, scale=1, **kwargs):
     assert isinstance(b, LayerOutput)
 
     if a.size is not None and b.size is not None:
-        print a.name, a.size, 'and', b.name, b.size
-        assert a.size == b.size
+        assert a.size == b.size, \
+        "{} has size {} and {} has size {}".format(
+            a.name, a.size, b.name, b.size)
 
     op = DotMulOperator(input_layer_names=[a.name, b.name], scale=scale)
     op.origin = [a, b]
@@ -2037,6 +2038,7 @@ def transpose_layer(input,
                     trans_order,
                     height=None,
                     width=None,
+                    channels=None,
                     name=None,
                     layer_attr=None):
     """
@@ -2062,13 +2064,15 @@ def transpose_layer(input,
     :rtype: LayerOutput
     """
     assert isinstance(input, LayerOutput)
-    assert input.num_filters is not None
-    num_channels = input.num_filters
+    assert (input.num_filters is not None) or (channels is not None)
+    num_channels = channels if channels else input.num_filters
     assert len(trans_order) == 3
 
     l = Layer(
         name=name,
         type=LayerType.TRANSPOSE_LAYER,
+        height=height,
+        width=width,
         inputs=Input(
             input.name,
             transpose=Transpose(
@@ -2077,10 +2081,12 @@ def transpose_layer(input,
                 trans_order_h=trans_order[1],
                 trans_order_w=trans_order[2])),
         **ExtraLayerAttribute.to_kwargs(layer_attr))
+
     return LayerOutput(
         name=name,
         layer_type=LayerType.TRANSPOSE_LAYER,
         parents=[input],
+        num_filters=l.config.num_filters,
         size=l.config.size)
 
 
