@@ -81,6 +81,7 @@ import sys
 import traceback
 import math
 import shutil
+import pdb
 
 try:
     from paddle.proto.DataConfig_pb2 import DataConfig
@@ -1394,8 +1395,12 @@ class LayerBase(object):
 
         config_assert(name not in g_layer_map,
                       'Duplicated layer name: %s' % name)
-
+        # try:
         self.inputs = copy.deepcopy(inputs)
+        # except:
+        #     pdb.set_trace()
+        #     print(inputs)
+
         self.operators = []
 
         if self.inputs is None:

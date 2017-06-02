@@ -30,7 +30,8 @@ def create(layers):
     pool = Parameters()
     for param in topology.proto().parameters:
         pool.__append_config__(param)
-    return pool
+        
+    return pool, topology
 
 
 class Parameters(object):

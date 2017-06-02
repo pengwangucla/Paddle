@@ -1,5 +1,5 @@
 import collections
-
+import numpy
 import py_paddle.swig_paddle as api
 
 from data_feeder import DataFeeder
@@ -70,6 +70,7 @@ class SGD(object):
         self.__gradient_machine__.randParameters()
         parameters.append_gradient_machine(gm)
 
+
     def train(self, reader, num_passes=1, event_handler=None, feeding=None):
         """
         Training method. Will train num_passes of input data.
@@ -115,10 +116,23 @@ class SGD(object):
                 for each_param in self.__gradient_machine__.getNonStaticParameters(
                 ):
                     updater.update(each_param)
+
+                cost_num = out_args.getSlotNum()
+                cost = [0.0 for i in range(cost_num)]
+
+                for cost_id in range(cost_num):
+                    cost_each = out_args.getSlotValue(cost_id)
+                    cost_each = cost_each.copyToNumpyMat()
+                    cost[cost_id] = cost_each.sum() / len(data_batch)
+
                 cost_sum = out_args.sum()
-                cost = cost_sum / len(data_batch)
-                updater.finishBatch(cost)
+                cost_sum = cost_sum / len(data_batch)
+                updater.finishBatch(cost_sum)
                 batch_evaluator.finish()
+
+                if len(cost) == 1:
+                    cost = cost[0]
+
                 event_handler(
                     v2_event.EndIteration(
                         pass_id=pass_id,
@@ -131,27 +145,37 @@ class SGD(object):
             event_handler(v2_event.EndPass(pass_id, evaluator=pass_evaluator))
         self.__gradient_machine__.finish()
 
+
     def test(self, reader, feeding=None):
         feeder = DataFeeder(self.__data_types__, feeding)
         evaluator = self.__gradient_machine__.makeEvaluator()
         out_args = api.Arguments.createArguments(0)
         evaluator.start()
-        total_cost = 0
+
         num_samples = 0.0
+        cost_num = len(self.__topology__.layers)
+        cost = [0.0 for x in range(cost_num)]
         
         for data_batch in reader():
             num_samples += len(data_batch)
             self.__gradient_machine__.forward(
                 feeder(data_batch), out_args, api.PASS_TEST)
-            total_cost += out_args.sum()
+            for cost_id in range(cost_num):
+                cost_each = out_args.getSlotValue(cost_id)
+                cost_each = cost_each.copyToNumpyMat()
+                cost[cost_id] = cost[cost_id] + cost_each.sum()
+
+            # total_cost += out_args.sum()
             self.__gradient_machine__.eval(evaluator)
 
         evaluator.finish()
+        cost = [cost_each / num_samples for cost_each in cost]
+        if len(cost) == 1:
+            cost = cost[0]
 
-        print "test"
         print("Evaluated examples {}\n".format(num_samples))
         return v2_event.TestResult(
-            evaluator=evaluator, cost=total_cost / num_samples)
+            evaluator=evaluator, cost=cost)
 
 
 def __check_train_args__(reader, event_handler, **kwargs):

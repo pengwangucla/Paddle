@@ -7,19 +7,19 @@ from data_feeder import DataFeeder
 
 __all__ = ['infer']
 class Inference(object):
-    def __init__(self, output_layer, parameters):
-        topo = topology.Topology(output_layer)
-        # print topo.proto()
+    def __init__(self, output, parameters):
+        if isinstance(output, topology.Topology):
+            topo = output
+        else:
+            topo = topology.Topology(output)
 
         gm = api.GradientMachine.createFromConfigProto(
             topo.proto(), api.CREATE_MODE_TESTING, [api.PARAMETER_VALUE])
-        # print 'here'
         for param in gm.getParameters():
             val = param.getBuf(api.PARAMETER_VALUE)
             name = param.getName()
             assert isinstance(val, api.Vector)
             val.copyFromNumpyArray(parameters.get(name).flatten())
-        # print 'here 2'
         self.__gradient_machine__ = gm
         self.__data_types__ = topo.data_type()
 
@@ -55,7 +55,6 @@ class Inference(object):
             for i, item in enumerate(result):
                 retv[i].append(item)
 
-        # retv = [numpy.concatenate(out) for out in retv]
         if len(retv) == 1:
             # means only one field is included
             return retv[0] if len(retv[0]) > 1 else retv[0][0]
@@ -64,7 +63,8 @@ class Inference(object):
             return retv
 
 
-def infer(output_layer, parameters, input, feeding=None, field='value'):
+def infer(output, parameters, input, feeding=None,
+          field='value'):
     """
     Infer a neural network by given neural network output and parameters.  The
     user should pass either a batch of input data or reader method.
@@ -96,5 +96,6 @@ def infer(output_layer, parameters, input, feeding=None, field='value'):
     :rtype: numpy.ndarray
     """
 
-    inferer = Inference(output_layer=output_layer, parameters=parameters)
+    inferer = Inference(output=output,
+                        parameters=parameters)
     return inferer.infer(field=field, input=input, feeding=feeding)

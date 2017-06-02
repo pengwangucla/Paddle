@@ -70,10 +70,19 @@ def plot_paddle_curve_v2(keys,
     :param outputfile: a file object for output
     :return: None
     """
+    def find_batch_num(x):
+        start_id = x[0, 0]
+        i = 0
+        while x[i, 0]  == start_id:
+            i += 1
+        return x[i - 1, 1]
+
     pass_pattern = r"Pass ([0-9]*), Batch ([0-9]*)"
-    test_pattern = r"Test samples ([0-9]*)"
+    # test_pattern = r"Test samples ([0-9]*)"
+    test_pattern = r"Task ([a-z]*), Pass ([0-9]*)"
     if not keys:
         keys = ['Cost']
+
     for k in keys:
         pass_pattern += r".*?%s ([0-9e\-\.]*)" % k
         test_pattern += r".*?%s ([0-9e\-\.]*)" % k
@@ -87,27 +96,28 @@ def plot_paddle_curve_v2(keys,
         if found:
             data.append([float(x) for x in found.groups()])
         if found_test:
-            test_data.append([float(x) for x in found_test.groups()])
+            test_data.append([float(x) for x in found_test.groups()[1:]])
     x = numpy.array(data)
-    x[:, 2:] = numpy.log(x[:, 2:])
     x_test = numpy.array(test_data)
+
     if x.shape[0] <= 0:
         sys.stderr.write("No data to plot. Exiting!\n")
         return
-    batch_num = 800
+
+    batch_num = find_batch_num(x)
     m = len(keys) + 2
     for i in xrange(2, m):
         pyplot.plot(
-            x[:, 0]* batch_num + x[:, 1],
+            x[:, 0] * batch_num + x[:, 1],
             x[:, i],
             color=cm.jet(1.0 * (i - 1) / (2 * m)),
             label=keys[i - 2])
         if (x_test.shape[0] > 0):
             pyplot.plot(
-                x[:, 0],
-                x_test[:, i],
+                x_test[:, 0] * batch_num,
+                x_test[:, i - 1],
                 color=cm.jet(1.0 - 1.0 * (i - 1) / (2 * m)),
-                label="Test " + keys[i - 1])
+                label="Test " + keys[i - 2])
     pyplot.xlabel('number of epoch')
     pyplot.legend(loc='best')
     if show_fig:

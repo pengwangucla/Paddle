@@ -405,7 +405,7 @@ void BaseMatrixT<T>::one() { applyUnary(unary::One<T>()); }
 
 
 DEFINE_MATRIX_UNARY_PARAMETER_OP(Pow, ONE_PARAMETER,
-   a = p >= 0.0f ? pow(a, p) : 0.0f);
+   a = pow(a, p));
 template<>
 void BaseMatrixT<real>::pow2(real p) {
   if (useGpu_) {
@@ -558,7 +558,7 @@ void BaseMatrixT<T>::add(BaseMatrixT& b, T p) {
 }
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(Pow, ONE_PARAMETER,
-   a = b != 0.0f ? pow(b, p) : 0.0f);
+   a = b > 1e-6f || b < 1e-6f ? pow(b, p) : 0.0f);
 template<>
 void BaseMatrixT<real>::pow2(BaseMatrixT& b, real p) {
   if (useGpu_) {
@@ -569,7 +569,7 @@ void BaseMatrixT<real>::pow2(BaseMatrixT& b, real p) {
 }
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(PowDerivative, ONE_PARAMETER,
-                        a *=  b != 0.0f ? p * pow(b, p - 1) : 0.0f);
+          a *= b > 1e-6f || b < 1e-6f ? p * pow(b, p - 1) : 0.0f);
 template<>
 void BaseMatrixT<real>::powDerivative(BaseMatrixT& b, real p) {
   applyBinary(binary::PowDerivative<real>(p), b);
