@@ -13,25 +13,12 @@
 # limitations under the License.
 
 __all__ = [
-    "TanhActivation",
-    "SigmoidActivation",
-    "SoftmaxActivation",
-    "IdentityActivation",
-    "LinearActivation",
-    "SqrtActivation",
-    "SequenceSoftmaxActivation",
-    'ExpActivation',
-    "ReluActivation",
-    "LeakyReluActivation",
-    "BReluActivation",
-    "SoftReluActivation",
-    "STanhActivation",
-    "AbsActivation", 
-    "SquareActivation", 
-    "BaseActivation",
-    "LogActivation",
-    "InvActivation",
-    "AcosActivation"
+    "TanhActivation", "SigmoidActivation", "SoftmaxActivation",
+    "IdentityActivation", "LinearActivation", "SqrtActivation",
+    "SequenceSoftmaxActivation", 'ExpActivation', "ReluActivation",
+    "LeakyReluActivation", "BReluActivation", "SoftReluActivation",
+    "STanhActivation", "AbsActivation", "SquareActivation", "BaseActivation",
+    "LogActivation", "InvActivation", "AcosActivation", "IsZeroActivation"
 ]
 
 
@@ -256,6 +243,22 @@ class AbsActivation(BaseActivation):
 
     def __init__(self):
         BaseActivation.__init__(self, 'abs', False)
+
+
+class IsZeroActivation(BaseActivation):
+    """
+    Abs Activation.
+
+    Forward:    :math:`f(z) = (z == 0)`
+
+    Derivative:
+
+    .. math::
+       0
+    """
+
+    def __init__(self):
+        BaseActivation.__init__(self, 'is_zero', False)
 
 
 class SquareActivation(BaseActivation):

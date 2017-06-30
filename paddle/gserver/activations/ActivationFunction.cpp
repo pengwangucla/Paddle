@@ -102,7 +102,6 @@ Error __must_check backward(Argument& act) {
 }
 END_DEFINE_ACTIVATION(sigmoid)
 
-
 /**
  * @brief Softmax Activation
  * \f[
@@ -238,6 +237,22 @@ Error __must_check backward(Argument& act) {
 END_DEFINE_ACTIVATION(relu)
 
 /**
+ * @brief IsZero Activation.
+ * forward. y = a == 0
+ */
+BEGIN_DEFINE_ACTIVATION(is_zero)
+Error __must_check forward(Argument& act) {
+  act.value->is_zero();
+  return Error();
+}
+
+Error __must_check backward(Argument& act) {
+  act.grad->zeroMem();
+  return Error();
+}
+END_DEFINE_ACTIVATION(is_zero)
+
+/**
  * @brief Leaky Relu Activation.
  * forward. y = max(a * z, z)
  *
@@ -264,7 +279,6 @@ Error __must_check backward(Argument& act) {
 }
 END_DEFINE_ACTIVATION(leaky_relu)
 
-
 /**
  * @brief BRelu Activation.
  *
@@ -289,7 +303,6 @@ Error __must_check backward(Argument& act) {
   return Error();
 }
 END_DEFINE_ACTIVATION(brelu)
-
 
 /**
  * @brief Tanh Activation.
@@ -466,10 +479,10 @@ END_DEFINE_ACTIVATION(acos)
  */
 BEGIN_DEFINE_ACTIVATION(pow)
 private:
-real p;
+int p;
 
 public:
-ACTIVATION_CLASS_NAME(pow)() : p(-1.) {}
+ACTIVATION_CLASS_NAME(pow)() : p(-1) {}
 Error __must_check forward(Argument& act) {
   SetDevice device(act.deviceId);
   Matrix::resizeOrCreate(act.in,
@@ -480,6 +493,7 @@ Error __must_check forward(Argument& act) {
 
   act.in->copyFrom(*act.value);
   act.value->pow2(*act.value, p);
+
   return Error();
 }
 Error __must_check backward(Argument& act) {
@@ -487,7 +501,6 @@ Error __must_check backward(Argument& act) {
   return Error();
 }
 END_DEFINE_ACTIVATION(pow)
-
 
 /**
  * @brief Exponential Activation.

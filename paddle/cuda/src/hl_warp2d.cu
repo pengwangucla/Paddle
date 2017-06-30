@@ -16,7 +16,6 @@ limitations under the License. */
 #include "hl_base.h"
 #include "paddle/utils/Logging.h"
 #include <stdio.h>
-#
 
 
 #define CUDA_KERNEL_LOOP(i, n) \
@@ -276,7 +275,7 @@ __global__ void Flow2DepthForward(real* flow,
       counter += 1.0f;
     }
 
-    depth_cur = depth_cur / max(counter, real(1e-7));
+    depth_cur = depth_cur / max(counter, real(1e-6));
     depth[index] = depth_cur <= 0. ? 0.0f : depth_cur;
   }
 }

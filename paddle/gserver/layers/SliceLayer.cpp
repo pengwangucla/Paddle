@@ -19,7 +19,7 @@ limitations under the License. */
 
 namespace paddle {
 /**
- * @brief A layer for resizing a minibatch matrix
+ * @brief A layer for slice layer
  * @note
  */
 
@@ -29,9 +29,7 @@ public:
 
   bool init(const LayerMap& layerMap,
             const ParameterMap& parameterMap) override;
-
   void forward(PassType passType) override;
-
   void backward(const UpdateCallback& callback) override;
 
 private:
@@ -45,9 +43,8 @@ private:
   int begin_idx_;
   int slice_size_;
   int slice_axis_;
-  int out_size_;    // output size after slice
+  int out_size_;  // output size after slice
 };
-
 
 REGISTER_LAYER(slice, SliceLayer);
 bool SliceLayer::init(const LayerMap& layerMap,
@@ -56,7 +53,7 @@ bool SliceLayer::init(const LayerMap& layerMap,
   CHECK_EQ(1U, inputLayers_.size());
   // batchsize, channel, height, width
 
-  if(config_.has_width() && config_.has_height()) {
+  if (config_.has_width() && config_.has_height()) {
     shape = IVector::create(size_t(4), useGpu_);
     shape->zeroMem();
     height_ = config_.height();
@@ -67,8 +64,7 @@ bool SliceLayer::init(const LayerMap& layerMap,
     shape->setElement(3, config_.width());
     CHECK_GT(shape->getElement(2), 0);
     CHECK_GT(shape->getElement(3), 0);
-  }
-  else {
+  } else {
     shape = IVector::create(size_t(2), useGpu_);
     shape->zeroMem();
     shape_dim_ = 2;
@@ -92,40 +88,38 @@ void SliceLayer::forward(PassType passType) {
   batchsize_ = input->getHeight();
   size_ = input->getWidth();
   shape->setElement(0, input->getHeight());
-  shape->setElement(1, size_ / height_ /width_);
+  shape->setElement(1, size_ / height_ / width_);
 
   out_size_ = 1;
-  for(int i = 0; i < shape_dim_; i ++)
-    out_size_ *= (i == slice_axis_? slice_size_ :shape->getElement(i));
+  for (int i = 0; i < shape_dim_; i++)
+    out_size_ *= (i == slice_axis_ ? slice_size_ : shape->getElement(i));
 
-  CHECK_GE(shape->getElement(slice_axis_),
-    slice_size_ + begin_idx_);
+  CHECK_GE(shape->getElement(slice_axis_), slice_size_ + begin_idx_);
 
-  if(slice_axis_ == 0) {
+  if (slice_axis_ == 0) {
     reserveOutput(slice_size_, size_);
     MatrixPtr output = getOutputValue();
 
     output->copyFrom(input->getData() + begin_idx_ * size_,
-             size_t(slice_size_ * size_));
+                     size_t(slice_size_ * size_));
   } else {
-    reserveOutput(batchsize_, 
-      slice_size_ * size_ / shape->getElement(slice_axis_));
+    reserveOutput(batchsize_,
+                  slice_size_ * size_ / shape->getElement(slice_axis_));
 
     MatrixPtr output = getOutputValue();
 
-    if(useGpu_){
+    if (useGpu_) {
       hl_matrix_slice(input->getData(),
-        output->getData(),
-        shape->getData(),
-        shape_dim_,
-        out_size_,
-        begin_idx_,
-        slice_size_,
-        slice_axis_,
-        true);
-    }
-    else {
-      LOG(ERROR)<< "Not implemented cpu slice for axis > 0";
+                      output->getData(),
+                      shape->getData(),
+                      shape_dim_,
+                      out_size_,
+                      begin_idx_,
+                      slice_size_,
+                      slice_axis_,
+                      true);
+    } else {
+      LOG(ERROR) << "Not implemented cpu slice for axis > 0";
     }
   }
 }
@@ -143,21 +137,20 @@ void SliceLayer::backward(const UpdateCallback& callback) {
   // the grad should be rotated in the reverse direction
   MatrixPtr preGrad = getInputGrad(0);
 
-  MatrixPtr tmpGrad = Matrix::create(batchsize_, size_,
-     false, useGpu_);
+  MatrixPtr tmpGrad = Matrix::create(batchsize_, size_, false, useGpu_);
   tmpGrad->zeroMem();
 
-  if(slice_axis_ == 0) {
-    if(useGpu_) {
+  if (slice_axis_ == 0) {
+    if (useGpu_) {
       hl_matrix_slice(outputGrad->getData(),
-        tmpGrad->getData(),
-        shape->getData(),
-        shape_dim_,
-        out_size_,
-        begin_idx_,
-        slice_size_,
-        slice_axis_,
-        false);
+                      tmpGrad->getData(),
+                      shape->getData(),
+                      shape_dim_,
+                      out_size_,
+                      begin_idx_,
+                      slice_size_,
+                      slice_axis_,
+                      false);
     } else {
       real* src = outputGrad->getData();
       real* dst = tmpGrad->getData() + begin_idx_ * size_;
@@ -165,20 +158,19 @@ void SliceLayer::backward(const UpdateCallback& callback) {
     }
     preGrad->add(*tmpGrad);
   } else {
-    if(useGpu_) {
+    if (useGpu_) {
       hl_matrix_slice(outputGrad->getData(),
-        tmpGrad->getData(),
-        shape->getData(),
-        shape_dim_,
-        out_size_,
-        begin_idx_,
-        slice_size_,
-        slice_axis_,
-        false);
+                      tmpGrad->getData(),
+                      shape->getData(),
+                      shape_dim_,
+                      out_size_,
+                      begin_idx_,
+                      slice_size_,
+                      slice_axis_,
+                      false);
       preGrad->add(*tmpGrad);
-    }
-    else {
-      LOG(ERROR)<< "Not implemented cpu slice for axis > 0";
+    } else {
+      LOG(ERROR) << "Not implemented cpu slice for axis > 0";
     }
   }
 }

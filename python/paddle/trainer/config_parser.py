@@ -498,6 +498,7 @@ class Input(Cfg):
             pad=None,
             transpose=None,
             slice=None,
+            gradient_diff=None,
             format=None,
             nnz=None,
             is_static=None,
@@ -889,10 +890,12 @@ class BilinearInterp(Cfg):
     def __init__(self, out_size_x=None, out_size_y=None, channels=None):
         self.add_keys(locals())
 
+
 @config_class
 class NearestInterp(Cfg):
     def __init__(self, out_size_x=None, out_size_y=None, channels=None):
         self.add_keys(locals())
+
 
 @config_class
 class Pool(Cfg):
@@ -928,10 +931,15 @@ class Transpose(Cfg):
         self.add_keys(locals())
 
 
-
 @config_class
 class Slice(Cfg):
     def __init__(self, channels, begin, size, axis):
+        self.add_keys(locals())
+
+
+@config_class
+class GradientDiff(Cfg):
+    def __init__(self, channels, scales):
         self.add_keys(locals())
 
 
@@ -1633,7 +1641,6 @@ class FCLayer(LayerBase):
         self.set_layer_height_width(1, 1)
 
 
-
 @config_layer('selective_fc')
 class SelectiveFCLayer(LayerBase):
     def __init__(self,
@@ -1980,14 +1987,14 @@ class PadLayer(LayerBase):
 @config_layer('warp2d')
 class Warp2DLayer(LayerBase):
     def __init__(self, name, inputs, **xargs):
-        super(Warp2DLayer, self).__init__(name, 'warp2d', 0,
-            inputs=inputs, **xargs)
-        config_assert(len(self.inputs) == 2,
-            'Warp2D must have two and only two input')
+        super(Warp2DLayer, self).__init__(
+            name, 'warp2d', 0, inputs=inputs, **xargs)
+        config_assert(
+            len(self.inputs) == 2, 'Warp2D must have two and only two input')
         input_layer = self.get_input_layer(0)
         channels = input_layer.size / input_layer.height / input_layer.width
-        self.set_cnn_layer(name, input_layer.height,
-            input_layer.width, channels)
+        self.set_cnn_layer(name, input_layer.height, input_layer.width,
+                           channels)
 
 
 @config_layer('trans_depth_flow')
@@ -1996,22 +2003,22 @@ class TransDepthFlowLayer(LayerBase):
         super(TransDepthFlowLayer, self).__init__(
             name, 'trans_depth_flow', 0, inputs=inputs, **xargs)
 
-        config_assert(len(self.inputs) == 2,
+        config_assert(
+            len(self.inputs) == 2,
             'TransDepthFlowLayer must have two and only two input')
 
         input_layer = self.get_input_layer(0)
         input_layer_1 = self.get_input_layer(1)
 
         print("size: {}, height:{}, width:{}".format(
-            input_layer_1.size, input_layer_1.height, 
-            input_layer_1.width))
+            input_layer_1.size, input_layer_1.height, input_layer_1.width))
 
         self.config.inputs[0].trans_depth_flow_conf.depth_to_flow = \
             depth2flow
 
         out_channels = 2 if depth2flow else 1
-        self.set_cnn_layer(name,input_layer.height,
-            input_layer.width, out_channels)
+        self.set_cnn_layer(name, input_layer.height, input_layer.width,
+                           out_channels)
 
 
 @config_layer('transpose')
@@ -2042,12 +2049,14 @@ class TransposeLayer(LayerBase):
         self.config.inputs[0].transpose_conf.trans_order_w = \
             transpose.trans_order_w
 
-        shape_in = [transpose.channels, input.height, input.width]
+        shape_in = [transpose.channels,
+                    image_conf.img_size_y,
+                    image_conf.img_size]
+
         self.config.num_filters = shape_in[transpose.trans_order_c]
-        self.set_cnn_layer(name,
-            shape_in[transpose.trans_order_h],
-            shape_in[transpose.trans_order_w],
-            shape_in[transpose.trans_order_c])
+        self.set_cnn_layer(name, shape_in[transpose.trans_order_h],
+                           shape_in[transpose.trans_order_w],
+                           shape_in[transpose.trans_order_c])
 
 
 @config_layer('slice')
@@ -2072,7 +2081,7 @@ class SliceLayer(LayerBase):
         if input_layer.height == 0 and input_layer.width == 0:
             input_layer.height = 1
             input_layer.width = 1
-        else:            
+        else:
             assert input_layer.width > 0
             assert input_layer.height > 0
 
@@ -2084,6 +2093,70 @@ class SliceLayer(LayerBase):
         self.set_layer_height_width(height_out, width_out)
         self.set_layer_size(size_out)
         self.config.num_filters = channel_out
+
+
+@config_layer('one_hot')
+class OneHotLayer(LayerBase):
+    def __init__(self, name, inputs, class_num, **xargs):
+        super(OneHotLayer, self).__init__(
+            name, 'one_hot', 0, inputs=inputs, **xargs)
+        config_assert(
+            len(self.inputs) == 1,
+            'OneHotLayer must have one and only one input')
+
+        input_layer = self.get_input_layer(0)
+        self.set_layer_size(class_num)
+
+
+@config_layer('gradient_diff')
+class GradientDiffLayer(LayerBase):
+    def __init__(self, name, inputs, **xargs):
+        super(GradientDiffLayer, self).__init__(
+            name, 'gradient_diff', 0, inputs=inputs, **xargs)
+        config_assert(
+            len(self.inputs) == 1,
+            'GradientDiffLayer must have one and only one input')
+
+        gradient_diff = self.inputs[0].gradient_diff
+        gradient_diff_conf = self.config.inputs[0].gradient_diff_conf
+        gradient_diff_conf.scales.extend(gradient_diff.scales)
+
+        input_layer = self.get_input_layer(0)
+        image_conf = gradient_diff_conf.image_conf
+
+        height, width = input_layer.height, input_layer.width
+        if height > 1 and width > 1:
+            parse_image(gradient_diff, input_layer.name, image_conf)
+        else:
+            config_assert(False,
+                          'input layer for spatial gradient diff must have \
+                height and with greater than 1')
+
+        scale_num = len(gradient_diff.scales)
+        channel_out = gradient_diff.channels * scale_num * 2
+
+        self.set_cnn_layer(name, height, width, channel_out)
+        self.config.num_filters = channel_out
+
+
+@config_layer('gradient_stopping')
+class GradientStoppingLayer(LayerBase):
+    """
+    Interface for gradient_stopping_layer
+    """
+
+    def __init__(self, name, inputs, device=None):
+        LayerBase.__init__(self, name, 'gradient_stopping', 0, inputs, **xargs)
+        config_assert(
+            len(self.inputs) >= 1,
+            ' GradientStoppingLayer must have at least 1 input')
+        for input_index in xrange(len(self.inputs)):
+            input_layer = self.get_input_layer(input_index)
+            if input_index == 0:
+                self.set_layer_size(input_layer.size)
+            if input_layer.height and input_layer.width:
+                self.set_layer_height_width(input_layer.height,
+                                            input_layer.width)
 
 
 @config_layer('batch_norm')
@@ -2186,11 +2259,15 @@ class ResizeLayer(LayerBase):
         config_assert(
             len(self.inputs) == 1,
             'ResizeLayer must have one and only one input')
+        
         if height and width:
             # in usual case, if we resize back the image, we have
             # channel at last indice, which was width in define
             channel = size / height / width
             self.set_cnn_layer(name, height, width, channel)
+        else:
+            self.set_layer_size(size)
+
 
 @config_layer('rotate')
 class RotateLayer(LayerBase):
@@ -2764,7 +2841,8 @@ class ScalingLayer(LayerBase):
         input_layer1 = self.get_input_layer(1)
         if input_layer1.HasField('height') and input_layer1.HasField('width'):
             config_assert(
-                input_layer1.size % input_layer1.height * input_layer1.width == 0,
+                input_layer1.size % input_layer1.height * input_layer1.width ==
+                0,
                 'input layer size {} must equal to height {} * width {}'.format(
                     input_layer1.size, input_layer1.height, input_layer1.width))
 

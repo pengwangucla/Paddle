@@ -45,7 +45,7 @@ class SGD(object):
     def __init__(self, cost, parameters, update_equation, extra_layers=None):
 
         if not isinstance(parameters, v2_parameters.Parameters):
-            raise TypeError('parameters should be parameters')
+            raise TypeError('parameters should be v2_parameters.Parameters')
 
         if not isinstance(update_equation, v2_optimizer.Optimizer):
             raise TypeError("update equation parameter must be "
@@ -163,7 +163,7 @@ class SGD(object):
             for cost_id in range(cost_num):
                 cost_each = out_args.getSlotValue(cost_id)
                 cost_each = cost_each.copyToNumpyMat()
-                cost[cost_id] = cost[cost_id] + cost_each.sum()
+                cost[cost_id] = cost[cost_id] + cost_each.sum(axis=0)
 
             # total_cost += out_args.sum()
             self.__gradient_machine__.eval(evaluator)

@@ -50,7 +50,7 @@ void hl_matrix_add(real *A_d,
 }
 
 #ifdef PADDLE_TYPE_DOUBLE
-    #define THRESHOLD   128
+     THRESHOLD   128
 #else
     #define THRESHOLD   64
 #endif
@@ -784,3 +784,235 @@ void hl_matrix_slice(real* input,
     CHECK_SYNC("hl_matrix_slice failed"); 
 
 }
+
+#define MIN_FLOAT 1e-15
+
+__global__ void keMatrixGradientDiff(const int n,
+                              real *input,
+                              real *output,
+                              const int* scales,
+                              const int scale_num,
+                              const int height,
+                              const int width,
+                              const int channel_in) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // currently we require all the value in input is larger than 0 
+    if (index < n) {
+      int x_i = index % width;
+      int y_i = (index / width) % height;
+      int c_i = (index / (height * width)) % channel_in;
+      int batch_id = index / (height * width * channel_in);
+      int out_channel = channel_in * scale_num * 2;
+
+#define INDEX(b, c, h, w) (b) * height * width * channel_in + \
+      (c) * height * width + (h) * width + (w)
+
+      int cur_size_idx = batch_id * height * width * out_channel + 
+                         c_i * height * width * scale_num * 2 +  
+                         + y_i * width + x_i;
+
+      for(int i = 0; i < scale_num; i ++) {
+        int idx_x = cur_size_idx + 2 * i * height * width;
+        int idx_y = cur_size_idx + (2 * i + 1) * height * width;
+        
+        if(x_i + scales[i] < width) {
+          real &val_off_x = input[INDEX(batch_id, c_i, y_i, (x_i + scales[i]))];
+          output[idx_x] =  val_off_x - input[index];
+          output[idx_x] = (fabsf(val_off_x) + fabsf(input[index])) > MIN_FLOAT ? 
+                output[idx_x] / (fabsf(val_off_x) + fabsf(input[index])) : 0.;
+        }
+        if(y_i + scales[i] < height) {
+          real &val_off_y = input[INDEX(batch_id, c_i, y_i + scales[i], x_i)];
+          output[idx_y] = val_off_y - input[index];
+          output[idx_y] = (fabsf(val_off_y) + fabsf(input[index])) > MIN_FLOAT ? 
+                output[idx_y] / (fabsf(val_off_y) + fabsf(input[index])) : 0.;
+        }
+       }
+    }
+#undef INDEX
+}
+
+void hl_matrix_gradient_diff(real* input,
+                     real* output,
+                     const int* scales,
+                     const int scale_num,
+                     const int in_size,
+                     const int height,
+                     const int width,
+                     const int channel_in) {
+
+    CHECK_NOTNULL(input);
+    CHECK_NOTNULL(output);
+    CHECK_EQ(channel_in, 1);
+    
+    const int threads = 512;
+    const int blocks = DIVUP(in_size, threads);
+
+    keMatrixGradientDiff<<< blocks, threads, 0, STREAM_DEFAULT >>>
+            (in_size,
+             input,
+             output,
+             scales,
+             scale_num,
+             height,
+             width,
+             channel_in);
+
+    CHECK_SYNC("hl_matrix_gradient_diff failed"); 
+}
+
+
+__global__ void keMatrixGradientDiffDerivative(const int n,
+                              real *in_grad,
+                              real *out_grad,
+                              real *input,
+                              const int* scales,
+                              const int scale_num,
+                              const int height,
+                              const int width,
+                              const int channel_in) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (index < n) {
+      // printf("%d, %d, %d, %d \n", scale_num, height, width, channel_in);
+      int x_i = index % width;
+      int y_i = (index / width) % height;
+      int c_i = (index / (height * width)) % channel_in;
+      int batch_id = index / (height * width * channel_in);
+      int out_channel = channel_in * scale_num * 2;
+
+#define INDEX(b, c, h, w) (b) * height * width * channel_in + \
+      (c) * height * width + (h) * width + w
+#define SQUARE(x) (x) * (x)
+
+      int cur_size_idx = batch_id * height * width * out_channel + 
+                         c_i * height * width * scale_num * 2 +  
+                          + y_i * width + x_i;
+
+      for(int i = 0; i < scale_num; i ++) {
+        int idx_x_f = cur_size_idx + 2 * i * height * width;
+        int idx_y_f = cur_size_idx + (2 * i + 1) * height * width;
+        int idx_x_b = idx_x_f - 1;
+        int idx_y_b = idx_y_f - width;
+        real up_val = 0.;
+        real down_val = 0.;
+        real val_cur = input[index];
+
+        if(x_i + scales[i] < width) {
+          real val_off = input[INDEX(batch_id, c_i, y_i, x_i + scales[i])];
+          if ((val_cur > 0) == (val_off > 0)) {
+            up_val = -2. * real((0 < val_off) - (val_off < 0)) * val_off;
+            down_val = fabsf(val_cur) + fabsf(val_off);
+            out_grad[index] += down_val > MIN_FLOAT ? 
+                in_grad[idx_x_f] * (up_val / SQUARE(down_val)) : 0.;
+          }
+        }
+
+        if(y_i + scales[i] < height) {
+          real val_off = input[INDEX(batch_id, c_i, y_i + scales[i], x_i)];
+          if ((val_cur > 0) == (val_off > 0)) {
+            up_val = -2. * real((0 < val_off) - (val_off < 0)) * val_off;
+            down_val = fabsf(val_cur) + fabsf(val_off);
+            out_grad[index] += down_val > MIN_FLOAT ? 
+                in_grad[idx_y_f] * (up_val / SQUARE(down_val)) : 0.;
+          }
+        }
+
+        if(x_i - scales[i] >= 0) {
+          real val_off = input[INDEX(batch_id, c_i, y_i, x_i - scales[i])];
+          if ((val_cur > 0) == (val_off > 0)) {
+            up_val = 2. * real((0 < val_off) - (val_off < 0)) * val_off;
+            down_val = fabsf(val_off) + fabsf(val_cur);
+            out_grad[index] += down_val > MIN_FLOAT ? 
+                in_grad[idx_x_b] * (up_val / SQUARE(down_val)) : 0.;
+          }
+        }
+
+        if(y_i - scales[i] >= 0) {
+          real val_off = input[INDEX(batch_id, c_i, y_i - scales[i], x_i)];
+          if ((val_cur > 0) == (val_off > 0)) {
+            up_val = 2. * real((0 < val_off) - (val_off < 0)) * val_off;
+            down_val = fabsf(val_off) + fabsf(val_cur);
+            out_grad[index] += down_val > MIN_FLOAT ? 
+                in_grad[idx_y_b] * (up_val / SQUARE(down_val)) : 0.;
+          }
+        }
+       }
+    }
+#undef INDEX
+#undef SQUARE
+}
+
+void hl_matrix_gradient_diff_derivative(real* in_grad,
+                                        real* out_grad,
+                                        real* input,
+                                        const int* scales,
+                                        const int scale_num,
+                                        const int in_size,
+                                        const int height,
+                                        const int width,
+                                        const int channel_in) {
+
+    CHECK_NOTNULL(in_grad);
+    CHECK_NOTNULL(out_grad);
+    CHECK_NOTNULL(input);
+    
+    const int threads = 512;
+    const int blocks = DIVUP(in_size, threads);
+
+    keMatrixGradientDiffDerivative<<< blocks, threads, 0, STREAM_DEFAULT >>>
+            (in_size,
+             in_grad,
+             out_grad,
+             input,
+             scales,
+             scale_num,
+             height,
+             width,
+             channel_in);
+
+    CHECK_SYNC("hl_matrix_gradient_diff_derivative failed"); 
+
+}
+
+
+__global__ void keMatrixOneHot(const int n,
+                              real *input,
+                              real *output,
+                              const int class_num,
+                              const real on_value) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (index < n) {
+      int class_id = int(input[index]);
+      class_id = input[index] - class_id > 0.5 ? class_id + 1 : class_id;
+      output[index * class_num + class_id] = on_value;
+    }
+}
+
+
+void hl_matrix_one_hot(real* input,
+                       real* output,
+                       const int batch_size,
+                       const int class_num,
+                       const real on_value) {
+
+    CHECK_NOTNULL(input);
+    CHECK_NOTNULL(output);
+    
+    const int threads = 512;
+    const int blocks = DIVUP(batch_size, threads);
+
+    keMatrixOneHot<<< blocks, threads, 0, STREAM_DEFAULT >>>
+            (batch_size,
+             input,
+             output,
+             class_num,
+             on_value);
+
+    CHECK_SYNC("hl_matrix_one_hot failed"); 
+
+}
+
+#undef MIN_FLOAT

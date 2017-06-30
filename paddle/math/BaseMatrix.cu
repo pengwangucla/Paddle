@@ -391,6 +391,10 @@ DEFINE_MATRIX_UNARY_OP(Zero, a = 0);
 template<class T>
 void BaseMatrixT<T>::zero() { applyUnary(unary::Zero<T>()); }
 
+DEFINE_MATRIX_UNARY_OP(IsZero, a = a == 0 ? 1.0 : 0.0);
+template<class T>
+void BaseMatrixT<T>::is_zero() { applyUnary(unary::IsZero<T>()); }
+
 template<class T>
 void BaseMatrixT<T>::zeroAtOffset(int64_t columnOffset, int64_t numColumns) {
   int numRows = height_;
@@ -558,7 +562,7 @@ void BaseMatrixT<T>::add(BaseMatrixT& b, T p) {
 }
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(Pow, ONE_PARAMETER,
-   a = b > 1e-6f || b < 1e-6f ? pow(b, p) : 0.0f);
+   a = b != 0.0f ? pow(b, int(p)) : 0.0f);
 template<>
 void BaseMatrixT<real>::pow2(BaseMatrixT& b, real p) {
   if (useGpu_) {
@@ -569,11 +573,12 @@ void BaseMatrixT<real>::pow2(BaseMatrixT& b, real p) {
 }
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(PowDerivative, ONE_PARAMETER,
-          a *= b > 1e-6f || b < 1e-6f ? p * pow(b, p - 1) : 0.0f);
+          a *= b != 0.0f ? p * pow(b, int(p - 1)) : 0.0f);
 template<>
 void BaseMatrixT<real>::powDerivative(BaseMatrixT& b, real p) {
   applyBinary(binary::PowDerivative<real>(p), b);
 } 
+
 
 DEFINE_MATRIX_BINARY_PARAMETER_OP(Add2, TWO_PARAMETER, a = p1 * a + p2 * b);
 template<class T>

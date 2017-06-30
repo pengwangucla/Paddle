@@ -75,17 +75,19 @@ def plot_paddle_curve_v2(keys,
         i = 0
         while x[i, 0]  == start_id:
             i += 1
-        return x[i - 1, 1]
+        return x[i - 1, 1] if x[i - 1, 1] > 0 else 1
 
-    pass_pattern = r"Pass ([0-9]*), Batch ([0-9]*)"
-    # test_pattern = r"Test samples ([0-9]*)"
-    test_pattern = r"Task ([a-z]*), Pass ([0-9]*)"
+    pass_pattern = r"Pass ([0-9]*), Batch ([0-9]*), "
+    test_pattern = r"Task ([a-z]*), Pass ([0-9]*), "
+
     if not keys:
         keys = ['Cost']
 
     for k in keys:
         pass_pattern += r".*?%s ([0-9e\-\.]*)" % k
         test_pattern += r".*?%s ([0-9e\-\.]*)" % k
+
+    print pass_pattern
     data = []
     test_data = []
     compiled_pattern = re.compile(pass_pattern)
@@ -201,6 +203,7 @@ def main(argv):
     cmdparser.add_argument('-v', '--version', help='the version of plotting')
     args = cmdparser.parse_args(argv)
     keys = args.key
+    print keys
     if args.input:
         inputfile = open(args.input)
     else:

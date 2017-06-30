@@ -278,6 +278,11 @@ message PadConfig {
   repeated uint32 pad_w = 4;
 }
 
+message GradientDiffConfig {
+  required ImageConfig image_conf = 1;
+  repeated uint32 scales = 2;
+}
+
 message TransposeConfig {
   required ImageConfig image_conf = 1;
   required uint32 trans_order_c = 2;
@@ -316,6 +321,7 @@ message LayerInputConfig {
   optional TransDepthFlowConfig trans_depth_flow_conf = 16;
   optional SliceConfig slice_conf = 17;
   optional NearestInterpConfig nearest_interp_conf = 18;
+  optional GradientDiffConfig gradient_diff_conf = 19;
 }
 
 message LayerConfig {

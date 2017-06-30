@@ -25,7 +25,8 @@ void checkMatrixEqual(const MatrixPtr& a, const MatrixPtr& b) {
   ASSERT_EQ(a->isTransposed(), b->isTransposed());
   for (size_t r = 0; r < a->getHeight(); ++r) {
     for (size_t c = 0; c < a->getWidth(); ++c) {
-      ASSERT_FLOAT_EQ(a->getElement(r, c), b->getElement(r, c));
+      ASSERT_FLOAT_EQ(a->getElement(r, c), b->getElement(r, c)) << "row " << r
+                                                                << " col" << c;
     }
   }
 }

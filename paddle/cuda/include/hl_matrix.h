@@ -224,7 +224,6 @@ extern void hl_matrix_collect_shared_bias(real* B_d,
 extern void hl_matrix_rotate(
     real* mat, real* matRot, int dimM, int dimN, bool clockWise);
 
-
 /**
  * @brief  Matrix smoothl1 loss
  *
@@ -236,7 +235,6 @@ extern void hl_matrix_rotate(
  */
 extern void hl_matrix_smoothl1(
     real* output, real* label, real* cost, int height, int width);
-
 
 /**
  * @brief  Matrix smooth l1 derivative
@@ -250,7 +248,6 @@ extern void hl_matrix_smoothl1(
 extern void hl_matrix_smoothl1_derivative(
     real* output, real* label, real* grad, int height, int width);
 
-
 /**
  * @brief  Matrix slice to a sub matrix
  *
@@ -261,13 +258,66 @@ extern void hl_matrix_smoothl1_derivative(
  * @param[in]   clockWise rotation direction
  */
 extern void hl_matrix_slice(real* input,
-                     real* output,
-                     const int* in_shape,
-                     const int shape_dim,
-                     const int out_size,
-                     const int begin,
-                     const int slice_size,
-                     const int slice_axis,
-                     const bool is_forward);
+                            real* output,
+                            const int* in_shape,
+                            const int shape_dim,
+                            const int out_size,
+                            const int begin,
+                            const int slice_size,
+                            const int slice_axis,
+                            const bool is_forward);
+
+/**
+ * @brief  Matrix gradient diff to diff matrix
+ *
+ * @param[in]   mat       input matrix (M x N).
+ * @param[out]  matRot    output matrix (N x M).
+ * @param[in]   dimM      input matrix height.
+ * @param[in]   dimN      input matrix width.
+ * @param[in]   clockWise rotation direction
+ */
+extern void hl_matrix_gradient_diff(real* input,
+                                    real* output,
+                                    const int* scales,
+                                    const int scale_num,
+                                    const int in_size,
+                                    const int height,
+                                    const int width,
+                                    const int channel_in);
+
+/**
+ * @brief  Gradient for matrix diff
+ *
+ * @param[in]   mat       input matrix (M x N).
+ * @param[out]  matRot    output matrix (N x M).
+ * @param[in]   dimM      input matrix height.
+ * @param[in]   dimN      input matrix width.
+ * @param[in]   clockWise rotation direction
+ */
+extern void hl_matrix_gradient_diff_derivative(real* in_grad,
+                                               real* out_grad,
+                                               real* input,
+                                               const int* scales,
+                                               const int scale_num,
+                                               const int in_size,
+                                               const int height,
+                                               const int width,
+                                               const int channel_in);
+
+
+/**
+ * @brief  Gradient for matrix diff
+ *
+ * @param[in]   mat       input matrix (M x N).
+ * @param[out]  matRot    output matrix (N x M).
+ * @param[in]   dimM      input matrix height.
+ * @param[in]   dimN      input matrix width.
+ * @param[in]   clockWise rotation direction
+ */
+extern void hl_matrix_one_hot(real* input,
+                              real* output,
+                              const int batch_size,
+                              const int class_num,
+                              const real on_value=1.0);
 
 #endif /* HL_MATRIX_H_ */

@@ -43,8 +43,7 @@ void doOneSliceTest(MatrixPtr& tensor,
                     size_t height,
                     size_t width,
                     size_t channel,
-                    bool useGpu){
-
+                    bool useGpu) {
   TestConfig config;
   config.layerConfig.set_type("slice");
   config.layerConfig.set_height(height);
@@ -52,15 +51,20 @@ void doOneSliceTest(MatrixPtr& tensor,
   config.layerConfig.set_size(height * width * channel);
 
   config.inputDefs.push_back(
-    {INPUT_DATA, "layer_0", height * width * channel, 0});
+      {INPUT_DATA, "layer_0", height * width * channel, 0});
   LayerInputConfig* input = config.layerConfig.add_inputs();
 
   std::vector<DataLayerPtr> dataLayers;
   LayerMap layerMap;
   vector<Argument> datas;
-  initDataLayer(
-      config, &dataLayers, &datas, &layerMap, "slice",
-      batchsize, false, useGpu);
+  initDataLayer(config,
+                &dataLayers,
+                &datas,
+                &layerMap,
+                "slice",
+                batchsize,
+                false,
+                useGpu);
 
   dataLayers[0]->getOutputValue()->zeroMem();
   dataLayers[0]->getOutputValue()->copyFrom(*tensor);
@@ -74,11 +78,9 @@ void doOneSliceTest(MatrixPtr& tensor,
   LayerPtr sliceLayer;
   initTestLayer(config, &layerMap, &parameters, &sliceLayer);
   sliceLayer->forward(PASS_GC);
-  
+
   checkMatrixEqual(sliceLayer->getOutputValue(), result);
-
 }
-
 
 TEST(Layer, SliceLayer) {
   TestConfig config;
@@ -93,8 +95,7 @@ TEST(Layer, SliceLayer) {
   config.layerConfig.set_size(INPUT_SIZE);
   config.layerConfig.set_height(HEIGHT);
   config.layerConfig.set_width(WIDTH);
-  config.inputDefs.push_back({INPUT_DATA, "layer_0",
-    INPUT_SIZE, 0});
+  config.inputDefs.push_back({INPUT_DATA, "layer_0", INPUT_SIZE, 0});
 
   LayerInputConfig* input = config.layerConfig.add_inputs();
   SliceConfig* slice = input->mutable_slice_conf();
@@ -104,138 +105,118 @@ TEST(Layer, SliceLayer) {
   MatrixPtr result_slice_channel;
   MatrixPtr result_slice_height;
   MatrixPtr result_slice_width;
-  
-  tensor = Matrix::create(1, size_t(BATCH_SIZE) *size_t(INPUT_SIZE),
-   false, false);
-  real tensorData[] = {1, 2, 2, 2,
-                       1, 2, 4, 4,
-                       4, 2, 2, 4,
-                       4, 4, 2, 2,
-                       4, 2, 2, 4,
-                       4, 4, 2, 2,
-                       1, 2, 2, 2,
-                       1, 2, 4, 4,
 
-                       1, 2, 2, 2,
-                       1, 2, 4, 4,
-                       4, 2, 2, 4,
-                       4, 4, 2, 2,
-                       4, 2, 2, 4,
-                       4, 4, 2, 2,
-                       1, 2, 2, 2,
-                       1, 2, 4, 4};
+  tensor =
+      Matrix::create(1, size_t(BATCH_SIZE) * size_t(INPUT_SIZE), false, false);
+  real tensorData[] = {1, 2, 2, 2, 1, 2, 4, 4, 4, 2, 2, 4, 4, 4, 2, 2,
+                       4, 2, 2, 4, 4, 4, 2, 2, 1, 2, 2, 2, 1, 2, 4, 4,
+
+                       1, 2, 2, 2, 1, 2, 4, 4, 4, 2, 2, 4, 4, 4, 2, 2,
+                       4, 2, 2, 4, 4, 4, 2, 2, 1, 2, 2, 2, 1, 2, 4, 4};
   tensor->setData(tensorData);
 
-  int axis = 0, begin=0, size=1;
-  result_slice_batch = Matrix::create(size, 
-    size_t(INPUT_SIZE), false, false);
+  int axis = 0, begin = 0, size = 1;
+  result_slice_batch = Matrix::create(size, size_t(INPUT_SIZE), false, false);
 
-  real sliceBatchData[] = {1, 2, 2, 2,
-                           1, 2, 4, 4,
-                           4, 2, 2, 4,
-                           4, 4, 2, 2,
-                           4, 2, 2, 4,
-                           4, 4, 2, 2,
-                           1, 2, 2, 2,
-                           1, 2, 4, 4};
+  real sliceBatchData[] = {1, 2, 2, 2, 1, 2, 4, 4, 4, 2, 2, 4, 4, 4, 2, 2,
+                           4, 2, 2, 4, 4, 4, 2, 2, 1, 2, 2, 2, 1, 2, 4, 4};
   result_slice_batch->setData(sliceBatchData);
 
-  //test forward correctness
+  // test forward correctness
   for (auto useGpu : {true}) {
-    doOneSliceTest(tensor, result_slice_batch,
-                   begin, size, axis, size_t(BATCH_SIZE),
-                   size_t(HEIGHT), size_t(WIDTH), size_t(CHANNEL), useGpu);
-    LOG(INFO)<<"Test slice batch, useGpu "<<useGpu;
+    doOneSliceTest(tensor,
+                   result_slice_batch,
+                   begin,
+                   size,
+                   axis,
+                   size_t(BATCH_SIZE),
+                   size_t(HEIGHT),
+                   size_t(WIDTH),
+                   size_t(CHANNEL),
+                   useGpu);
+    LOG(INFO) << "Test slice batch, useGpu " << useGpu;
     slice->set_axis(axis);
     slice->set_begin(begin);
     slice->set_size(size);
     testLayerGrad(config, "slice", 10, false, useGpu);
   }
 
-
   axis = 1;
   begin = 0;
   size = 1;
-  result_slice_channel = Matrix::create(BATCH_SIZE, 
-    size_t(size * INPUT_SIZE / CHANNEL), false, false);
+  result_slice_channel = Matrix::create(
+      BATCH_SIZE, size_t(size * INPUT_SIZE / CHANNEL), false, false);
 
-  real sliceChannelData[] = {1, 2, 2, 2,
-                             1, 2, 4, 4,
-                             4, 2, 2, 4,
-                             4, 4, 2, 2,
-                             1, 2, 2, 2,
-                             1, 2, 4, 4,
-                             4, 2, 2, 4,
-                             4, 4, 2, 2};
+  real sliceChannelData[] = {1, 2, 2, 2, 1, 2, 4, 4, 4, 2, 2, 4, 4, 4, 2, 2,
+                             1, 2, 2, 2, 1, 2, 4, 4, 4, 2, 2, 4, 4, 4, 2, 2};
 
   result_slice_channel->setData(sliceChannelData);
 
-  doOneSliceTest(tensor, result_slice_channel,
-                 begin, size, axis, size_t(BATCH_SIZE),
-                 size_t(HEIGHT), size_t(WIDTH), size_t(CHANNEL), true);
-  LOG(INFO)<<"Test slice channel";
+  doOneSliceTest(tensor,
+                 result_slice_channel,
+                 begin,
+                 size,
+                 axis,
+                 size_t(BATCH_SIZE),
+                 size_t(HEIGHT),
+                 size_t(WIDTH),
+                 size_t(CHANNEL),
+                 true);
+  LOG(INFO) << "Test slice channel";
 
   slice->set_axis(axis);
   slice->set_begin(begin);
   slice->set_size(size);
   testLayerGrad(config, "slice", 10, false, true);
-
 
   axis = 2;
   begin = 1;
   size = 2;
-  result_slice_height = Matrix::create(BATCH_SIZE, 
-    size_t(size * INPUT_SIZE / HEIGHT), false, false);
+  result_slice_height = Matrix::create(
+      BATCH_SIZE, size_t(size * INPUT_SIZE / HEIGHT), false, false);
 
-  real sliceHeightData[] = {1, 2, 4, 4,
-                       4, 2, 2, 4,
-                       4, 4, 2, 2,
-                       1, 2, 2, 2,
-                       1, 2, 4, 4,
-                       4, 2, 2, 4,
-                       4, 4, 2, 2,
-                       1, 2, 2, 2};
-  result_slice_height ->setData(sliceHeightData);
-  
-  doOneSliceTest(tensor, result_slice_height,
-                 begin, size, axis, size_t(BATCH_SIZE),
-                 size_t(HEIGHT), size_t(WIDTH), size_t(CHANNEL), true);
-  LOG(INFO)<<"Test slice height";
+  real sliceHeightData[] = {1, 2, 4, 4, 4, 2, 2, 4, 4, 4, 2, 2, 1, 2, 2, 2,
+                            1, 2, 4, 4, 4, 2, 2, 4, 4, 4, 2, 2, 1, 2, 2, 2};
+  result_slice_height->setData(sliceHeightData);
+
+  doOneSliceTest(tensor,
+                 result_slice_height,
+                 begin,
+                 size,
+                 axis,
+                 size_t(BATCH_SIZE),
+                 size_t(HEIGHT),
+                 size_t(WIDTH),
+                 size_t(CHANNEL),
+                 true);
+  LOG(INFO) << "Test slice height";
 
   slice->set_axis(axis);
   slice->set_begin(begin);
   slice->set_size(size);
   testLayerGrad(config, "slice", 10, false, true);
 
-
   axis = 3;
   begin = 1;
   size = 2;
-  result_slice_width = Matrix::create(BATCH_SIZE,
-    size_t(size * INPUT_SIZE / WIDTH), false, false);
+  result_slice_width = Matrix::create(
+      BATCH_SIZE, size_t(size * INPUT_SIZE / WIDTH), false, false);
 
-  real sliceWidthData[] = { 2, 2,
-                            2, 4,
-                            2, 2,
-                            4, 2,
-                            2, 2,
-                            4, 2,
-                            2, 2,
-                            2, 4,
-                            2, 2,
-                            2, 4,
-                            2, 2,
-                            4, 2,
-                            2, 2,
-                            4, 2,
-                            2, 2,
-                            2, 4};
+  real sliceWidthData[] = {2, 2, 2, 4, 2, 2, 4, 2, 2, 2, 4, 2, 2, 2, 2, 4,
+                           2, 2, 2, 4, 2, 2, 4, 2, 2, 2, 4, 2, 2, 2, 2, 4};
   result_slice_width->setData(sliceWidthData);
-  
-  doOneSliceTest(tensor, result_slice_width,
-                 begin, size, axis, size_t(BATCH_SIZE),
-                 size_t(HEIGHT), size_t(WIDTH), size_t(CHANNEL), true);
-  LOG(INFO)<<"Test slice width";
+
+  doOneSliceTest(tensor,
+                 result_slice_width,
+                 begin,
+                 size,
+                 axis,
+                 size_t(BATCH_SIZE),
+                 size_t(HEIGHT),
+                 size_t(WIDTH),
+                 size_t(CHANNEL),
+                 true);
+  LOG(INFO) << "Test slice width";
 
   slice->set_axis(axis);
   slice->set_begin(begin);

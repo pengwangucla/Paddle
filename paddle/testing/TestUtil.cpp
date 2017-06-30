@@ -205,7 +205,8 @@ void checkMatrixEqual(const MatrixPtr& a, const MatrixPtr& b) {
   EXPECT_EQ(a->isTransposed(), b->isTransposed());
   for (size_t r = 0; r < a->getHeight(); ++r) {
     for (size_t c = 0; c < a->getWidth(); ++c) {
-      EXPECT_FLOAT_EQ(a->getElement(r, c), b->getElement(r, c));
+      EXPECT_FLOAT_EQ(a->getElement(r, c), b->getElement(r, c)) << "row:" << r
+                                                                << " col:" << c;
     }
   }
 }

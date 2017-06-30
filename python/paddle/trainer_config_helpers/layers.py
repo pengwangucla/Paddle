@@ -31,40 +31,21 @@ except ImportError:
 import copy
 
 __all__ = [
-    "full_matrix_projection",
-    "AggregateLevel",
-    "ExpandLevel",
-    "identity_projection",
-    "dotmul_projection",
-    "dotmul_operator",
-    "repeat_layer",
-    "seq_reshape_layer",
-    "table_projection",
-    "mixed_layer",
-    "data_layer",
-    "embedding_layer",
-    "fc_layer",
-    "grumemory",
-    "pooling_layer",
-    "lstmemory",
-    "last_seq",
-    "first_seq",
-    "cos_sim",
-    "hsigmoid",
+    "full_matrix_projection", "AggregateLevel", "ExpandLevel",
+    "identity_projection", "dotmul_projection", "dotmul_operator",
+    "repeat_layer", "seq_reshape_layer", "table_projection", "mixed_layer",
+    "data_layer", "embedding_layer", "fc_layer", "grumemory", "pooling_layer",
+    "lstmemory", "last_seq", "first_seq", "cos_sim", "hsigmoid",
     "conv_projection", "mse_cost", "regression_cost", "smoothl1_cost",
-    'classification_cost', "LayerOutput", 'img_conv_layer', 'img_pool_layer',
+    "classification_cost", "LayerOutput", 'img_conv_layer', 'img_pool_layer',
     'batch_norm_layer', 'img_cmrnorm_layer', 'addto_layer', 'concat_layer',
     'seq_concat_layer', 'lstm_step_layer', 'recurrent_group', 'memory',
     'StaticInput', 'expand_layer', 'scaling_layer', 'scaling_projection',
-    'power_layer', 'interpolation_layer', 
-    'bilinear_interp_layer',
-    'nearest_interp_layer',
-    'trans_layer', 
-    'rotate_layer', 
-    'sum_to_one_norm_layer', 
-    'get_output_layer',
-    'LayerType', 'context_projection', 'beam_search', 'maxid_layer',
-    'GeneratedInput', 'SubsequenceInput', 'gru_step_layer', 'recurrent_layer',
+    'power_layer', 'interpolation_layer', 'bilinear_interp_layer',
+    'nearest_interp_layer', 'trans_layer', 'rotate_layer',
+    'sum_to_one_norm_layer', 'get_output_layer', 'LayerType',
+    'context_projection', 'beam_search', 'maxid_layer', 'GeneratedInput',
+    'SubsequenceInput', 'gru_step_layer', 'recurrent_layer',
     'BaseGeneratedInput', 'conv_operator', 'conv_shift_layer', 'tensor_layer',
     'selective_fc_layer', 'sampling_id_layer', 'slope_intercept_layer',
     'trans_full_matrix_projection', 'linear_comb_layer', 'convex_comb_layer',
@@ -73,8 +54,9 @@ __all__ = [
     'multi_binary_label_cross_entropy', 'sum_cost', 'rank_cost', 'lambda_cost',
     'huber_cost', 'block_expand_layer', 'maxout_layer', 'out_prod_layer',
     'print_layer', 'priorbox_layer', 'cross_channel_norm_layer', 'spp_layer',
-    'pad_layer', 'eos_layer', 'layer_support', 'resize_layer', 'transpose_layer',
-    'warp2d_layer', 'trans_depth_flow_layer', 'slice_layer'
+    'pad_layer', 'eos_layer', 'layer_support', 'resize_layer',
+    'transpose_layer', 'warp2d_layer', 'trans_depth_flow_layer', 'slice_layer',
+    'gradient_stopping_layer', 'gradient_diff_layer', 'one_hot_layer'
 ]
 
 
@@ -107,6 +89,9 @@ class LayerType(object):
     NORM_LAYER = 'norm'
     SUM_TO_ONE_NORM_LAYER = 'sum_to_one_norm'
     ADDTO_LAYER = 'addto'
+    GRADIENT_STOPPING_LAYER = 'gradient_stopping'
+    GRADIENT_DIFF_LAYER = 'gradient_diff'
+    ONE_HOT_LAYER = 'one_hot'
 
     CONCAT_LAYER = 'concat'
     CONCAT_PROJ_LAYER = 'concat2'
@@ -922,8 +907,12 @@ def fc_layer(input,
         active_type=act.name,
         **ExtraLayerAttribute.to_kwargs(layer_attr))
     return LayerOutput(
-        name, LayerType.FC_LAYER, input,
-        activation=act, num_filters=size, size=size)
+        name,
+        LayerType.FC_LAYER,
+        input,
+        activation=act,
+        num_filters=size,
+        size=size)
 
 
 @wrap_name_default("print")
@@ -1698,10 +1687,10 @@ def bilinear_interp_layer(input,
 @wrap_name_default()
 @layer_support()
 def nearest_interp_layer(input,
-                       out_size_x=None,
-                       out_size_y=None,
-                       name=None,
-                       layer_attr=None):
+                         out_size_x=None,
+                         out_size_y=None,
+                         name=None,
+                         layer_attr=None):
     """
     This layer is to implement nearest interpolation on conv layer output.
 
@@ -1728,6 +1717,7 @@ def nearest_interp_layer(input,
     assert input.num_filters is not None
 
     num_channels = input.num_filters
+    # print num_channels
     l = Layer(
         name=name,
         inputs=Input(
@@ -1834,10 +1824,11 @@ def scaling_layer(input, weight, name=None, layer_attr=None):
         inputs=[weight.name, input.name],
         **ExtraAttr.to_kwargs(layer_attr))
     return LayerOutput(
-        name, LayerType.SCALING_LAYER,
+        name,
+        LayerType.SCALING_LAYER,
         parents=[weight, input],
         size=input.size,
-        num_filters = out_ch)
+        num_filters=out_ch)
 
 
 @wrap_name_default()
@@ -1877,8 +1868,12 @@ def trans_layer(input, name=None, layer_attr=None):
 
 @wrap_name_default()
 @layer_support()
-def resize_layer(input, size, height=None, width=None,
-                 name=None, layer_attr=None):
+def resize_layer(input,
+                 size,
+                 height=None,
+                 width=None,
+                 name=None,
+                 layer_attr=None):
     """
     A layer for reshape a minibatch matrix.
 
@@ -1898,7 +1893,12 @@ def resize_layer(input, size, height=None, width=None,
     :return: LayerOutput object.
     :rtype: LayerOutput
     """
-    Layer(
+    out_ch = None
+    if height and width:
+        assert size % ( height * width ) == 0
+        out_ch = size / height / width
+
+    l = Layer(
         name=name,
         type=LayerType.RESIZE_LAYER,
         size=size,
@@ -1906,10 +1906,9 @@ def resize_layer(input, size, height=None, width=None,
         width=width,
         inputs=[input.name],
         **ExtraAttr.to_kwargs(layer_attr))
-    return LayerOutput(name,
-                       LayerType.RESIZE_LAYER,
-                       parents=[input],
-                       size=size)
+    return LayerOutput(name, LayerType.RESIZE_LAYER,
+        num_filters=out_ch,
+        parents=[input], size=size)
 
 
 @wrap_name_default()
@@ -1944,7 +1943,7 @@ def rotate_layer(input, height, width, name=None, layer_attr=None):
     :rtype: LayerOutput
     """
     assert isinstance(input, LayerOutput)
-    
+
     l = Layer(
         name=name,
         height=height,
@@ -2006,8 +2005,7 @@ def warp2d_layer(input, name=None, layer_attr=None):
 
 @wrap_name_default()
 @layer_support()
-def trans_depth_flow_layer(input, depth2flow=True,
-                           name=None, layer_attr=None):
+def trans_depth_flow_layer(input, depth2flow=True, name=None, layer_attr=None):
     """
     A layer for transfer between depth and flow.
 
@@ -2055,6 +2053,10 @@ def transpose_layer(input,
                     layer_attr=None):
     """
     A layer for transpose the order of height width and channel
+    height, width, channel is the corresponding shape of the input
+    layer should be set if they are not available.
+    Paddle order is [channel, height, width], 
+
     .. math::
     The example usage is:
 
@@ -2070,6 +2072,7 @@ def transpose_layer(input,
     :type trans_order: List
     :param name: Layer name.
     :type name: basestring
+
     :param layer_attr: extra layer attributes.
     :type layer_attr: ExtraLayerAttribute.
     :return: LayerOutput object.
@@ -2104,12 +2107,7 @@ def transpose_layer(input,
 
 @wrap_name_default("slice")
 @layer_support()
-def slice_layer(input,
-                begin,
-                size,
-                axis,
-                name=None,
-                layer_attr=None):
+def slice_layer(input, begin, size, axis, name=None, layer_attr=None):
     """
     A layer for slice the order of height width and channel
     .. math::
@@ -2149,16 +2147,98 @@ def slice_layer(input,
         inputs=Input(
             input.name,
             slice=Slice(
-                channels=num_channels,
-                begin=begin,
-                size=size,
-                axis=axis)),
+                channels=num_channels, begin=begin, size=size, axis=axis)),
         **ExtraLayerAttribute.to_kwargs(layer_attr))
 
     return LayerOutput(
         name=name,
         num_filters=out_ch,
         layer_type=LayerType.SLICE_LAYER,
+        parents=[input],
+        size=l.config.size)
+
+
+@wrap_name_default("gradient_diff")
+@layer_support()
+def gradient_diff_layer(input, scales, name=None, layer_attr=None):
+    """
+    A layer for computing spatial difference along x and y
+    axis with given scale steps
+    .. math::
+    The example usage is:
+
+    .. code-block:: python
+       rot = gradient_diff_layer(input=layer)
+
+    :param input: Input layer.
+    :type input: LayerOutput
+    :param trans_order: The order of transpose for a tensor.
+    :type trans_order: List
+    :param name: Layer name.
+    :type name: basestring
+    :param layer_attr: extra layer attributes.
+    :type layer_attr: ExtraLayerAttribute.
+    :return: LayerOutput object.
+    :rtype: LayerOutput
+    """
+    assert isinstance(input, LayerOutput)
+    assert isinstance(scales, collections.Sequence)
+    assert input.num_filters is not None
+    num_channels = input.num_filters
+
+    l = Layer(
+        name=name,
+        type=LayerType.GRADIENT_DIFF_LAYER,
+        inputs=Input(
+            input.name,
+            gradient_diff=GradientDiff(
+                channels=num_channels, scales=scales)),
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+
+    return LayerOutput(
+        name=name,
+        num_filters=l.config.num_filters,
+        layer_type=LayerType.GRADIENT_DIFF_LAYER,
+        parents=[input],
+        size=l.config.size)
+
+
+@wrap_name_default('gradient_stopping')
+@layer_support()
+def gradient_stopping_layer(input, name=None, layer_attr=None):
+    """
+    Stop the gradient in the backward pass.
+    """
+    assert isinstance(input, LayerOutput)
+    l = Layer(
+        name=name,
+        type=LayerType.GRADIENT_STOPPING_LAYER,
+        inputs=[input.name],
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+    return LayerOutput(
+        name=name,
+        layer_type=LayerType.GRADIENT_STOPPING_LAYER,
+        parents=[input],
+        num_filters=input.num_filters,
+        size=l.config.size)
+
+
+@wrap_name_default('one_hot')
+@layer_support()
+def one_hot_layer(input, class_num, name=None, layer_attr=None):
+    """
+    Stop the gradient in the backward pass.
+    """
+    assert isinstance(input, LayerOutput)
+    l = Layer(
+        name=name,
+        type=LayerType.ONE_HOT_LAYER,
+        inputs=[input.name],
+        class_num=class_num,
+        **ExtraLayerAttribute.to_kwargs(layer_attr))
+    return LayerOutput(
+        name=name,
+        layer_type=LayerType.ONE_HOT_LAYER,
         parents=[input],
         size=l.config.size)
 
@@ -4102,8 +4182,7 @@ def classification_cost(input,
         assert isinstance(e.for_classification, bool)
         assert e.for_classification
 
-        e(name=e.__name__, input=input, label=label, weight=weight,
-          top_k=top_k)
+        e(name=e.__name__, input=input, label=label, weight=weight, top_k=top_k)
 
     if not isinstance(evaluator, collections.Sequence):
         evaluator = [evaluator]

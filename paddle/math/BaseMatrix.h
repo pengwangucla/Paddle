@@ -437,6 +437,7 @@ public:
   void abs2();
   void sign2();
   void zero();
+  void is_zero();
 
   /**
    * @code
